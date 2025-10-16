@@ -1,0 +1,72 @@
+version: '3.8'
+
+services:
+  frontend:
+    build: ./frontend
+    container_name: frontend_service
+    ports:
+      - "8501:8501"
+    volumes:
+      - ./frontend/src:/app/src
+    depends_on:
+      - file_service
+      - groq_service
+      - training_service
+      - prediction_service
+      - profiling_service
+
+  file_service:
+    build: ./file_service
+    container_name: file_service_app
+    ports:
+      - "8000:8000"
+    volumes:
+      - ./file_service:/app
+      - uploads_data:/app/uploads
+
+  groq_service:
+    build: groq_service
+    container_name: groq_service_app
+    ports:
+      - "8008:8000"
+    env_file:
+      - .env
+    environment:
+      - GROQ_API_KEY=${GROQ_API_KEY}
+    volumes:
+      - ./groq_service:/app
+      - uploads_data:/app/uploads
+
+  # 3. Сервис для обучения (теперь активен)s
+  training_service:
+    build: ./training_service
+    container_name: training_service_app
+    ports:
+      - "8001:8000" # <-- Используем порт 8001
+    volumes:
+      - ./training_service:/app
+      - uploads_data:/app/uploads # Общий том для данных
+      - models_data:/app/models
+
+  prediction_service:
+    build: ./prediction_service
+    container_name: prediction_service_app
+    ports:
+      - "8003:8000" # <-- Используем порт 8003
+    volumes:
+      - ./prediction_service:/app
+      - models_data:/app/models
+
+  profiling_service:
+    build: ./profiling_service
+    container_name: profiling_service_app
+    ports:
+      - "8004:8000" # <-- Используем порт 8004
+    volumes:
+      - ./profiling_service:/app
+      - uploads_data:/app/uploads
+      - reports_data:/app/reports
+volumes:
+  uploads_data:
+  models_data:
+  reports_data:
