@@ -152,8 +152,8 @@ JSON
 │
 ├── frontend/                 # <-- Все, что касается Streamlit интерфейса
 │   ├── Dockerfile            # Инструкция по сборке контейнера для Streamlit
-│   ├── requirements.txt      # Зависимости для Streamlit
-│   └── src/                  # Папка с кодом
+│   ├── requirements.txt      
+│   └── src/# Папка с кодом
 │       ├── app.py            # Основной файл-диспетчер
 │       └── pages/            # Папка для страниц приложения
 │           ├── 1_AI_Analyst_Report.py

@@ -7,13 +7,14 @@ services:
     ports:
       - "8501:8501"
     volumes:
-      - ./frontend/src:/app/src
+      - ./frontend/src:/app
     depends_on:
       - file_service
       - groq_service
       - training_service
       - prediction_service
       - profiling_service
+      - fraud_check_service
 
   file_service:
     build: ./file_service
@@ -66,6 +67,15 @@ services:
       - ./profiling_service:/app
       - uploads_data:/app/uploads
       - reports_data:/app/reports
+
+  fraud_check_service:
+    build: ./fraud_check_service
+    container_name: fraud_check_service_app
+    ports:
+      - "8005:8000"
+    volumes:
+      - ./fraud_check_service:/app
+      - ./fraud_check_service/blacklists:/app/blacklists
 volumes:
   uploads_data:
   models_data:
