@@ -1,11 +1,11 @@
-version: '3.8'
-
 services:
   frontend:
     build: ./frontend
     container_name: frontend_service
     ports:
       - "8501:8501"
+    networks:
+      - ai_analyst_net
     volumes:
       - ./frontend/src:/app
     depends_on:
@@ -15,6 +15,15 @@ services:
       - prediction_service
       - profiling_service
       - fraud_check_service
+    environment:
+      - FILE_SERVICE_URL=http://file_service:8000
+      - GROQ_SERVICE_URL=http://groq_service:8000
+      - TRAINING_SERVICE_URL=http://training_service:8000
+      - PREDICTION_SERVICE_URL=http://prediction_service:8000
+      - PROFILING_SERVICE_URL=http://profiling_service:8000
+      - FRAUD_CHEK_SERVICE_URL=http://fraud_check_service:8000
+
+
 
   file_service:
     build: ./file_service
@@ -24,6 +33,8 @@ services:
     volumes:
       - ./file_service:/app
       - uploads_data:/app/uploads
+    networks:
+      - ai_analyst_net
 
   groq_service:
     build: groq_service
@@ -37,36 +48,44 @@ services:
     volumes:
       - ./groq_service:/app
       - uploads_data:/app/uploads
+    networks:
+      - ai_analyst_net
 
-  # 3. Сервис для обучения (теперь активен)s
   training_service:
     build: ./training_service
     container_name: training_service_app
     ports:
-      - "8001:8000" # <-- Используем порт 8001
+      - "8001:8000"
     volumes:
       - ./training_service:/app
-      - uploads_data:/app/uploads # Общий том для данных
+      - uploads_data:/app/uploads
       - models_data:/app/models
+    networks:
+      - ai_analyst_net
 
   prediction_service:
     build: ./prediction_service
     container_name: prediction_service_app
     ports:
-      - "8003:8000" # <-- Используем порт 8003
+      - "8003:8000"
     volumes:
       - ./prediction_service:/app
       - models_data:/app/models
+      - uploads_data:/app/uploads
+    networks:
+      - ai_analyst_net
 
   profiling_service:
     build: ./profiling_service
     container_name: profiling_service_app
     ports:
-      - "8004:8000" # <-- Используем порт 8004
+      - "8004:8000"
     volumes:
       - ./profiling_service:/app
       - uploads_data:/app/uploads
       - reports_data:/app/reports
+    networks:
+      - ai_analyst_net
 
   fraud_check_service:
     build: ./fraud_check_service
@@ -75,8 +94,41 @@ services:
       - "8005:8000"
     volumes:
       - ./fraud_check_service:/app
-      - ./fraud_check_service/blacklists:/app/blacklists
+#      - ./fraud_check_service/blacklists:/app/blacklists
+      - uploads_data:/app/uploads
+    networks:
+      - ai_analyst_net
+    env_file:
+      - .env
+    environment:
+      - POSTGRES_USER=${POSTGRES_USER}
+      - POSTGRES_PASSWORD=${POSTGRES_PASSWORD}
+      - POSTGRES_DB=${POSTGRES_DB}
+      - POSTGRES_HOST=${POSTGRES_HOST}
+    depends_on:
+      - db
+
+  db:
+    image: postgres:14-alpine
+    container_name: ai_analyst_db
+    env_file:
+      - .env
+    environment:
+      - POSTGRES_USER=${POSTGRES_USER}
+      - POSTGRES_PASSWORD=${POSTGRES_PASSWORD}
+      - POSTGRES_DB=${POSTGRES_DB}
+    volumes:
+      - postgres_data:/var/lib/postgresql/data
+    networks:
+      - ai_analyst_net
+    ports:
+      - "5433:5432"
+networks:
+    ai_analyst_net:
+      driver: bridge
+
 volumes:
   uploads_data:
   models_data:
   reports_data:
+  postgres_data:

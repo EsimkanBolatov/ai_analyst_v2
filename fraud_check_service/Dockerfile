@@ -1,15 +1,22 @@
 FROM python:3.10-slim
 
+RUN apt-get update && apt-get install -y \
+    build-essential \
+    libpq-dev \
+    netcat-traditional \
+    && rm -rf /var/lib/apt/lists/*
+
 WORKDIR /app
 
-COPY requirements.txt .
-RUN pip install --no-cache-dir -r requirements.txt
+COPY ./requirements.txt /app/requirements.txt
 
-COPY . .
+RUN pip install --no-cache-dir -r /app/requirements.txt
 
-# Копируем черные списки внутрь образа
-COPY ./blacklists /app/blacklists
+RUN python -m spacy download ru_core_news_sm
 
-EXPOSE 8000
+COPY . /app
 
-CMD ["uvicorn", "main:app", "--host", "0.0.0.0", "--port", "8000"]
+RUN chmod +x /app/wait-for-it.sh
+
+CMD /app/wait-for-it.sh db:5432 && uvicorn main:app --host 0.0.0.0 --port 8000
+

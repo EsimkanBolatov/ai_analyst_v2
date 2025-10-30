@@ -19,9 +19,7 @@ class ProfileRequest(BaseModel):
 
 @app.post("/profile/")
 async def create_profile(request: ProfileRequest):
-    """
-    Генерирует HTML-отчет о профиле данных для указанного файла.
-    """
+
     file_path = os.path.join(UPLOAD_DIR, request.filename)
     report_filename = f"{os.path.splitext(request.filename)[0]}_profile.html"
     report_path = os.path.join(REPORTS_DIR, report_filename)
@@ -40,9 +38,6 @@ async def create_profile(request: ProfileRequest):
 
 @app.get("/reports/{report_filename}", response_class=HTMLResponse)
 async def get_report(report_filename: str):
-    """
-    Читает сохраненный HTML-отчет и возвращает его содержимое.
-    """
     report_path = os.path.join(REPORTS_DIR, report_filename)
     if not os.path.exists(report_path):
         raise HTTPException(status_code=404, detail="Report file not found")

@@ -4,7 +4,7 @@ FROM python:3.10-slim
 WORKDIR /app
 
 COPY requirements.txt .
-# ydata-profiling требует системные зависимости
+
 RUN apt-get update && apt-get install -y --no-install-recommends \
     build-essential \
     && pip install --timeout=100 --no-cache-dir -r requirements.txt \

@@ -1,22 +1,23 @@
 #file_service/main.py
 import os
-from fastapi import FastAPI, UploadFile, File, Form, HTTPException
-from fastapi.middleware.cors import CORSMiddleware
 import shutil
 import pandas as pd
+from fastapi import FastAPI, UploadFile, File, Form, HTTPException
+from fastapi.middleware.cors import CORSMiddleware
+from typing import List
+import logging
 
-# Создаем папку для загрузок, если ее нет
-# ИСПРАВЛЕНИЕ: Используем абсолютный путь внутри контейнера
+logging.basicConfig(level=logging.INFO)
+logger = logging.getLogger(__name__)
+
 UPLOAD_DIR = "/app/uploads"
 os.makedirs(UPLOAD_DIR, exist_ok=True)
 
 app = FastAPI(title="File Ingestion Service")
 
-# --- Настройка CORS ---
-# Позволяет нашему фронтенду (с другого порта) общаться с этим сервисом
 app.add_middleware(
     CORSMiddleware,
-    allow_origins=["*"],  # В реальном проекте здесь должен быть адрес фронтенда
+    allow_origins=["*"],
     allow_credentials=True,
     allow_methods=["*"],
     allow_headers=["*"],
@@ -28,15 +29,13 @@ async def upload_chunk(
     session_id: str = Form(...), # Уникальный ID для каждой сессии загрузки
     chunk_index: int = Form(...) # Номер текущей части файла
 ):
-    """
-    Принимает одну часть (чанк) файла и сохраняет ее.
-    """
+
+# Принимает одну часть (чанк) файла и сохраняет ее
+
     try:
-        # Создаем папку для конкретной сессии загрузки
         session_path = os.path.join(UPLOAD_DIR, session_id)
         os.makedirs(session_path, exist_ok=True)
 
-        # Сохраняем чанк во временный файл
         chunk_path = os.path.join(session_path, f"chunk_{chunk_index}")
         with open(chunk_path, "wb") as buffer:
             shutil.copyfileobj(file.file, buffer)
@@ -49,56 +48,73 @@ async def upload_chunk(
 @app.post("/assemble/{session_id}")
 async def assemble_chunks(
     session_id: str,
-    filename: str = Form(...) # Имя оригинального файла
+    filename: str = Form(...)
 ):
-    """
-    Собирает все чанки в один финальный файл.
-    """
     session_path = os.path.join(UPLOAD_DIR, session_id)
     final_file_path = os.path.join(UPLOAD_DIR, filename)
 
     try:
-        # Получаем список всех чанков и сортируем их по номеру
         chunks = sorted(
             os.listdir(session_path),
             key=lambda x: int(x.split('_')[1])
         )
-
-        # "Склеиваем" чанки в один файл
         with open(final_file_path, "wb") as final_file:
             for chunk_name in chunks:
                 chunk_path = os.path.join(session_path, chunk_name)
                 with open(chunk_path, "rb") as chunk_file:
                     final_file.write(chunk_file.read())
-
-        # Удаляем временную папку с чанками
         shutil.rmtree(session_path)
 
         return {"status": "success", "message": f"File '{filename}' assembled successfully at {final_file_path}"}
     except Exception as e:
         raise HTTPException(status_code=500, detail=str(e))
 
-@app.get("/columns/{filename}")
-async def get_columns(filename: str):
+
+@app.get("/files/", response_model=List[str])
+async def get_uploaded_files():
+    try:
+        files = [f for f in os.listdir(UPLOAD_DIR) if
+                 f.endswith('.csv') and os.path.isfile(os.path.join(UPLOAD_DIR, f))]
+        return files
+    except Exception as e:
+        raise HTTPException(status_code=500, detail=f"Could not read upload directory: {e}")
+
+
+# --- Эндпоинт получения колонок ---
+@app.get("/columns/{filename}", response_model=List[str])
+async def get_file_columns(filename: str):
     """
-    Читает CSV-файл и возвращает список его колонок (с расширенным логированием).
+    Читает CSV-файл (только заголовки)
+    и возвращает список имен колонок
     """
-    print(f"--- Получен запрос на получение колонок для файла: {filename} ---")
     file_path = os.path.join(UPLOAD_DIR, filename)
-    print(f"Пытаюсь прочитать файл по абсолютному пути: {file_path}")
+    logger.info(f"Запрос колонок для файла: {file_path}")
 
     if not os.path.exists(file_path):
-        print(f"ОШИБКА: Файл не существует по пути: {file_path}")
-        raise HTTPException(status_code=404, detail=f"Файл не найден по пути {file_path}")
+        logger.error(f"Файл не найден: {file_path}")  # <-- Логирование
+        raise HTTPException(status_code=404, detail="File not found")
+
     try:
-        print("Файл существует. Пытаюсь прочитать его с помощью pandas...")
-        df_head = pd.read_csv(file_path, nrows=0)
-        columns = df_head.columns.tolist()
-        print(f"Успешно прочитаны колонки: {columns}")
-        return {"columns": columns}
+        # Читаем первую строку, явно указывая, что это header
+        df_cols = pd.read_csv(file_path, nrows=0, header=0)
+
+        column_list = df_cols.columns.tolist()
+
+        logger.info(f"Найденные колонки: {column_list}")
+
+        # Проверка на странный баг
+        if column_list == ["columns"]:
+            logger.warning("Pandas вернул ['columns']. Похоже, файл не имеет шапки.")
+            df_cols_no_header = pd.read_csv(file_path, nrows=0, header=None)
+            column_list_no_header = [str(c) for c in df_cols_no_header.columns.tolist()]
+            logger.info(f"Попытка 2 (без шапки): {column_list_no_header}")
+            return column_list_no_header
+
+        return column_list
+
+    except pd.errors.EmptyDataError:
+        logger.warning(f"Файл пустой: {file_path}")
+        return []
     except Exception as e:
-        # ЭТО САМОЕ ВАЖНОЕ: МЫ ВЫВЕДЕМ ТОЧНУЮ ОШИБКУ В ЛОГИ
-        print(f"!!!!!!!!!! ОШИБКА ВНУТРИ PANDAS !!!!!!!!!")
-        print(f"Точная ошибка: {e}")
-        print(f"!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!")
-        raise HTTPException(status_code=500, detail=f"Ошибка при чтении колонок файла: {str(e)}")
+        logger.error(f"Не удалось прочитать колонки: {e}")
+        raise HTTPException(status_code=500, detail=f"Could not read file columns: {e}")
