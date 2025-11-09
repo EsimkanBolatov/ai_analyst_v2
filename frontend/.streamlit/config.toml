@@ -1,0 +1,5 @@
+[server]
+maxUploadSize = 2048 # Устанавливает лимит в 500 МБ
+enableWebsocketCompression = false
+runOnSave = true
+headless = true
