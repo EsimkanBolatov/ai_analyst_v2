@@ -1,7 +1,7 @@
 services:
   - type: web
     name: ai-analyst-v2-file-service
-    env: docker
+    runtime: docker
     plan: free
     region: oregon
     rootDir: file_service
@@ -14,7 +14,7 @@ services:
 
   - type: web
     name: ai-analyst-v2-groq-service
-    env: docker
+    runtime: docker
     plan: free
     region: oregon
     rootDir: groq_service
@@ -30,7 +30,7 @@ services:
 
   - type: web
     name: ai-analyst-v2-training-service
-    env: docker
+    runtime: docker
     plan: free
     region: oregon
     rootDir: training_service
@@ -48,7 +48,7 @@ services:
 
   - type: web
     name: ai-analyst-v2-prediction-service
-    env: docker
+    runtime: docker
     plan: free
     region: oregon
     rootDir: prediction_service
@@ -66,7 +66,7 @@ services:
 
   - type: web
     name: ai-analyst-v2-profiling-service
-    env: docker
+    runtime: docker
     plan: free
     region: oregon
     rootDir: profiling_service
@@ -82,7 +82,7 @@ services:
 
   - type: web
     name: ai-analyst-v2-fraud-check-service
-    env: docker
+    runtime: docker
     plan: free
     region: oregon
     rootDir: fraud_check_service
@@ -98,7 +98,7 @@ services:
 
   - type: web
     name: ai-analyst-v2-frontend
-    env: docker
+    runtime: docker
     plan: free
     region: oregon
     rootDir: frontend
