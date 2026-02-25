@@ -21,11 +21,15 @@ import time
 
 app = FastAPI(title="Fraud Check Service", version="2.2-db")
 
-DB_USER = os.getenv("POSTGRES_USER", "user")
-DB_PASSWORD = os.getenv("POSTGRES_PASSWORD", "password")
-DB_HOST = os.getenv("POSTGRES_HOST", "db")
-DB_NAME = os.getenv("POSTGRES_DB", "ai_analyst")
-DATABASE_URL = f"postgresql://{DB_USER}:{DB_PASSWORD}@{DB_HOST}/{DB_NAME}"
+# Priority for cloud deployments (Render/Neon): full connection string.
+# Fallback keeps local docker-compose compatibility.
+DATABASE_URL = os.getenv("DATABASE_URL")
+if not DATABASE_URL:
+    DB_USER = os.getenv("POSTGRES_USER", "user")
+    DB_PASSWORD = os.getenv("POSTGRES_PASSWORD", "password")
+    DB_HOST = os.getenv("POSTGRES_HOST", "db")
+    DB_NAME = os.getenv("POSTGRES_DB", "ai_analyst")
+    DATABASE_URL = f"postgresql://{DB_USER}:{DB_PASSWORD}@{DB_HOST}/{DB_NAME}"
 
 engine = create_engine(DATABASE_URL)
 SessionLocal = sessionmaker(autocommit=False, autoflush=False, bind=engine)
