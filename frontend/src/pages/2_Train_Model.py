@@ -3,8 +3,8 @@ import requests
 import os
 
 # --- URL сервисов ---
-FILE_SERVICE_URL = "http://file_service:8000"
-TRAINING_SERVICE_URL = "http://training_service:8000"
+FILE_SERVICE_URL = os.getenv("FILE_SERVICE_URL", "http://file_service:8000")
+TRAINING_SERVICE_URL = os.getenv("TRAINING_SERVICE_URL", "http://training_service:8000")
 
 st.set_page_config(page_title="Train Model", layout="wide")
 st.title("🗿 Обучение модели детектора аномалий")

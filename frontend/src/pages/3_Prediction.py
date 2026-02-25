@@ -8,9 +8,9 @@ import plotly.express as px
 import numpy as np
 
 # --- Настройки ---
-FILE_SERVICE_URL = "http://file_service:8000"
-PREDICTION_SERVICE_URL = "http://prediction_service:8000"
-TRAINING_SERVICE_URL = "http://training_service:8000"
+FILE_SERVICE_URL = os.getenv("FILE_SERVICE_URL", "http://file_service:8000")
+PREDICTION_SERVICE_URL = os.getenv("PREDICTION_SERVICE_URL", "http://prediction_service:8000")
+TRAINING_SERVICE_URL = os.getenv("TRAINING_SERVICE_URL", "http://training_service:8000")
 
 st.set_page_config(page_title="Анализ и Оценка", layout="wide")
 st.title("🎯 Анализ аномалий и предсказания")

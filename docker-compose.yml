@@ -21,7 +21,7 @@ services:
       - TRAINING_SERVICE_URL=http://training_service:8000
       - PREDICTION_SERVICE_URL=http://prediction_service:8000
       - PROFILING_SERVICE_URL=http://profiling_service:8000
-      - FRAUD_CHEK_SERVICE_URL=http://fraud_check_service:8000
+      - FRAUD_CHECK_SERVICE_URL=http://fraud_check_service:8000
 
 
 
@@ -41,8 +41,6 @@ services:
     container_name: groq_service_app
     ports:
       - "8008:8000"
-    env_file:
-      - .env
     environment:
       - GROQ_API_KEY=${GROQ_API_KEY}
     volumes:
@@ -98,8 +96,6 @@ services:
       - uploads_data:/app/uploads
     networks:
       - ai_analyst_net
-    env_file:
-      - .env
     environment:
       - POSTGRES_USER=${POSTGRES_USER}
       - POSTGRES_PASSWORD=${POSTGRES_PASSWORD}
@@ -111,8 +107,6 @@ services:
   db:
     image: postgres:14-alpine
     container_name: ai_analyst_db
-    env_file:
-      - .env
     environment:
       - POSTGRES_USER=${POSTGRES_USER}
       - POSTGRES_PASSWORD=${POSTGRES_PASSWORD}
