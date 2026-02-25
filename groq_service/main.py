@@ -1,17 +1,19 @@
-#groq_service/main
 from fastapi import FastAPI, HTTPException
-from pydantic import BaseModel, Field  # Добавляем Field
+from pydantic import BaseModel, Field
 import pandas as pd
 import os
 from groq import Groq, GroqError
 import json
-from typing import List, Dict, Any  # Добавляем Dict, Any
+from typing import List, Dict, Any
+import requests  
 
 app = FastAPI(title="Groq AI Analyst Service")
 
-# --- КЛЮЧ API ---
+# --- КЛЮЧ API И URL СЕРВИСОВ ---
 api_key = os.environ.get("GROQ_API_KEY")
 client = Groq(api_key=api_key) if api_key else None
+# <-- ВАЖНО: Добавили URL для связи с file_service
+FILE_SERVICE_URL = os.getenv("FILE_SERVICE_URL", "http://file_service:8000")
 
 
 # --- Модели данных ---
@@ -70,8 +72,35 @@ class ChatResponse(BaseModel):
 
 # --- Путь к файлам ---
 UPLOAD_DIR = "/app/uploads"
+os.makedirs(UPLOAD_DIR, exist_ok=True)
 
-# --- Вспомогательные функции get_chat_context_prompt  ---
+
+# --- Вспомогательные функции ---
+def _ensure_uploaded_file(filename: str) -> str:
+    """
+    Проверяет, есть ли файл локально. 
+    Если нет (как при деплое на Render), скачивает его из file_service.
+    """
+    file_path = os.path.join(UPLOAD_DIR, filename)
+    if os.path.exists(file_path):
+        return file_path
+
+    try:
+        response = requests.get(f"{FILE_SERVICE_URL}/download/{filename}", timeout=120, stream=True)
+        if response.status_code == 404:
+            raise HTTPException(status_code=404, detail=f"Файл '{filename}' не найден в file_service.")
+        response.raise_for_status()
+
+        # Сохраняем скачанный файл локально для дальнейшего анализа
+        with open(file_path, "wb") as f:
+            for chunk in response.iter_content(chunk_size=1024 * 1024):
+                if chunk:
+                    f.write(chunk)
+        return file_path
+    except requests.RequestException as e:
+        raise HTTPException(status_code=502, detail=f"Не удалось получить файл '{filename}' из file_service: {e}")
+
+
 def get_chat_context_prompt(dataframe_head: str) -> str:
     return f"""
         Ты продолжаешь диалог с аналитиком данных.
@@ -83,15 +112,14 @@ def get_chat_context_prompt(dataframe_head: str) -> str:
     """
 
 
-# --- Эндпоинт /analyze/  ---
+# --- Эндпоинт /analyze/ ---
 @app.post("/analyze/", response_model=AIAnalysisResponse)
 async def analyze_dataset(request: AnalyzeRequest):
     if not client:
         raise HTTPException(status_code=500, detail="API-ключ Groq не настроен в сервисе.")
 
-    file_path = f"/app/uploads/{request.filename}"
-    if not os.path.exists(file_path):
-        raise HTTPException(status_code=404, detail="Файл не найден.")
+    # Используем функцию _ensure_uploaded_file вместо жесткой проверки os.path.exists
+    file_path = _ensure_uploaded_file(request.filename)
 
     try:
         # Читаем больше строк, чтобы у Groq было больше контекста
@@ -181,14 +209,13 @@ async def analyze_dataset(request: AnalyzeRequest):
                 for anomaly in anomalies_list:
                     anomaly['data'] = {}
 
-        # Дополнительная валидация перед возвратом (на случай если Groq ошибся)
+        # Дополнительная валидация перед возвратом
         try:
             validated_response = AIAnalysisResponse(**response_content)
             return validated_response
         except Exception as pydantic_err:
             print(f"Ошибка валидации Pydantic: {pydantic_err}")
             return response_content
-
 
     except GroqError as e:
         raise HTTPException(status_code=502, detail=f"Ошибка от API Groq: {str(e)}")
@@ -198,13 +225,15 @@ async def analyze_dataset(request: AnalyzeRequest):
         raise HTTPException(status_code=500, detail=f"Внутренняя ошибка сервиса: {str(e)}")
 
 
-# --- Эндпоинт /chat/  ---
+# --- Эндпоинт /chat/ ---
 @app.post("/chat/", response_model=ChatResponse)
 async def chat_with_analyst(request: ChatRequest):
-    if not client: raise HTTPException(status_code=500, detail="API-ключ Groq не настроен.")
-    file_path = f"/app/uploads/{request.filename}"
-    if not os.path.exists(file_path): raise HTTPException(status_code=404,
-                                                          detail=f"Файл '{request.filename}' не найден.")
+    if not client: 
+        raise HTTPException(status_code=500, detail="API-ключ Groq не настроен.")
+    
+    # Также используем функцию _ensure_uploaded_file
+    file_path = _ensure_uploaded_file(request.filename)
+    
     try:
         df_head = pd.read_csv(file_path, nrows=20)
         df_head_str = df_head.to_string()
@@ -212,8 +241,11 @@ async def chat_with_analyst(request: ChatRequest):
             {"role": "system", "content": get_chat_context_prompt(df_head_str)},
             *[msg.model_dump() for msg in request.chat_history]
         ]
-        chat_completion = client.chat.completions.create(messages=messages_for_api, model="llama-3.1-8b-instant",
-                                                         temperature=0.3)
+        chat_completion = client.chat.completions.create(
+            messages=messages_for_api, 
+            model="llama-3.1-8b-instant",
+            temperature=0.3
+        )
         response_content = chat_completion.choices[0].message.content
         return ChatResponse(role="assistant", content=response_content)
     except GroqError as e:

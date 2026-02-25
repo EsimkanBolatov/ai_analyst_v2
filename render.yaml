@@ -23,6 +23,8 @@ services:
     envVars:
       - key: GROQ_API_KEY
         sync: false
+      - key: FILE_SERVICE_URL
+        value: https://ai-analyst-v2-file-service.onrender.com
     buildFilter:
       paths:
         - groq_service/**
