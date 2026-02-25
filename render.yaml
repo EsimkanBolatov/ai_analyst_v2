@@ -1,0 +1,123 @@
+services:
+  - type: web
+    name: ai-analyst-v2-file-service
+    env: docker
+    plan: free
+    region: oregon
+    rootDir: file_service
+    dockerCommand: sh -c "uvicorn main:app --host 0.0.0.0 --port ${PORT:-8000}"
+    healthCheckPath: /docs
+    buildFilter:
+      paths:
+        - file_service/**
+        - render.yaml
+
+  - type: web
+    name: ai-analyst-v2-groq-service
+    env: docker
+    plan: free
+    region: oregon
+    rootDir: groq_service
+    dockerCommand: sh -c "uvicorn main:app --host 0.0.0.0 --port ${PORT:-8000}"
+    healthCheckPath: /docs
+    envVars:
+      - key: GROQ_API_KEY
+        sync: false
+    buildFilter:
+      paths:
+        - groq_service/**
+        - render.yaml
+
+  - type: web
+    name: ai-analyst-v2-training-service
+    env: docker
+    plan: free
+    region: oregon
+    rootDir: training_service
+    dockerCommand: sh -c "uvicorn main:app --host 0.0.0.0 --port ${PORT:-8000}"
+    healthCheckPath: /docs
+    envVars:
+      - key: DATABASE_URL
+        sync: false
+      - key: FILE_SERVICE_URL
+        value: https://ai-analyst-v2-file-service.onrender.com
+    buildFilter:
+      paths:
+        - training_service/**
+        - render.yaml
+
+  - type: web
+    name: ai-analyst-v2-prediction-service
+    env: docker
+    plan: free
+    region: oregon
+    rootDir: prediction_service
+    dockerCommand: sh -c "uvicorn main:app --host 0.0.0.0 --port ${PORT:-8000}"
+    healthCheckPath: /docs
+    envVars:
+      - key: DATABASE_URL
+        sync: false
+      - key: FILE_SERVICE_URL
+        value: https://ai-analyst-v2-file-service.onrender.com
+    buildFilter:
+      paths:
+        - prediction_service/**
+        - render.yaml
+
+  - type: web
+    name: ai-analyst-v2-profiling-service
+    env: docker
+    plan: free
+    region: oregon
+    rootDir: profiling_service
+    dockerCommand: sh -c "uvicorn main:app --host 0.0.0.0 --port ${PORT:-8000}"
+    healthCheckPath: /docs
+    envVars:
+      - key: FILE_SERVICE_URL
+        value: https://ai-analyst-v2-file-service.onrender.com
+    buildFilter:
+      paths:
+        - profiling_service/**
+        - render.yaml
+
+  - type: web
+    name: ai-analyst-v2-fraud-check-service
+    env: docker
+    plan: free
+    region: oregon
+    rootDir: fraud_check_service
+    dockerCommand: sh -c "uvicorn main:app --host 0.0.0.0 --port ${PORT:-8000}"
+    healthCheckPath: /docs
+    envVars:
+      - key: DATABASE_URL
+        sync: false
+    buildFilter:
+      paths:
+        - fraud_check_service/**
+        - render.yaml
+
+  - type: web
+    name: ai-analyst-v2-frontend
+    env: docker
+    plan: free
+    region: oregon
+    rootDir: frontend
+    dockerCommand: sh -c "streamlit run app.py --server.address 0.0.0.0 --server.port ${PORT:-8501}"
+    healthCheckPath: /
+    envVars:
+      - key: FILE_SERVICE_URL
+        value: https://ai-analyst-v2-file-service.onrender.com
+      - key: GROQ_SERVICE_URL
+        value: https://ai-analyst-v2-groq-service.onrender.com
+      - key: TRAINING_SERVICE_URL
+        value: https://ai-analyst-v2-training-service.onrender.com
+      - key: PREDICTION_SERVICE_URL
+        value: https://ai-analyst-v2-prediction-service.onrender.com
+      - key: PROFILING_SERVICE_URL
+        value: https://ai-analyst-v2-profiling-service.onrender.com
+      - key: FRAUD_CHECK_SERVICE_URL
+        value: https://ai-analyst-v2-fraud-check-service.onrender.com
+    buildFilter:
+      paths:
+        - frontend/**
+        - render.yaml

@@ -2,15 +2,46 @@ import pandas as pd
 import joblib
 import json
 import os
+import io
 from fastapi import FastAPI, HTTPException
 from pydantic import BaseModel, conlist
 from typing import Dict, Any, List
+from sqlalchemy import create_engine, Column, String, LargeBinary, Text
+from sqlalchemy.orm import declarative_base, sessionmaker
+import requests
 
 app = FastAPI(title="Prediction Service")
 
 # --- Директории ---
 MODELS_DIR = "/app/models"
 UPLOAD_DIR = "/app/uploads"
+os.makedirs(UPLOAD_DIR, exist_ok=True)
+FILE_SERVICE_URL = os.getenv("FILE_SERVICE_URL", "http://file_service:8000")
+
+# --- Хранилище моделей ---
+# Render services do not share a local filesystem.
+# If DATABASE_URL is set, models/configs are loaded from Postgres (Neon).
+DATABASE_URL = os.getenv("DATABASE_URL")
+USE_DB_STORAGE = bool(DATABASE_URL)
+
+Base = declarative_base()
+
+
+class ModelArtifact(Base):
+    __tablename__ = "model_artifacts"
+    model_name = Column(String, primary_key=True, index=True)
+    model_blob = Column(LargeBinary, nullable=False)
+    config_json = Column(Text, nullable=False)
+
+
+engine = create_engine(DATABASE_URL, pool_pre_ping=True) if USE_DB_STORAGE else None
+SessionLocal = sessionmaker(autocommit=False, autoflush=False, bind=engine) if USE_DB_STORAGE else None
+
+
+@app.on_event("startup")
+def on_startup():
+    if USE_DB_STORAGE:
+        Base.metadata.create_all(bind=engine)
 
 # --- Pydantic Модели ---
 class DynamicRequest(BaseModel):
@@ -113,17 +144,49 @@ def generate_features(df: pd.DataFrame, config: Dict[str, Any]) -> (pd.DataFrame
 
 # --- Вспомогательная функция загрузки модели и конфига ---
 def load_model_and_config(model_name: str):
-    model_path = os.path.join(MODELS_DIR, f"{model_name}.joblib")
-    config_path = os.path.join(MODELS_DIR, f"{model_name}.json")
-    if not os.path.exists(model_path) or not os.path.exists(config_path):
-        raise HTTPException(status_code=404, detail=f"Модель '{model_name}' или ее конфиг не найдены.")
+    if USE_DB_STORAGE:
+        db = SessionLocal()
+        try:
+            artifact = db.get(ModelArtifact, model_name)
+            if artifact is None:
+                raise HTTPException(status_code=404, detail=f"Модель '{model_name}' или ее конфиг не найдены.")
+            model = joblib.load(io.BytesIO(artifact.model_blob))
+            config = json.loads(artifact.config_json)
+            return model, config
+        finally:
+            db.close()
+    else:
+        model_path = os.path.join(MODELS_DIR, f"{model_name}.joblib")
+        config_path = os.path.join(MODELS_DIR, f"{model_name}.json")
+        if not os.path.exists(model_path) or not os.path.exists(config_path):
+            raise HTTPException(status_code=404, detail=f"Модель '{model_name}' или ее конфиг не найдены.")
+        try:
+            model = joblib.load(model_path)
+            with open(config_path, 'r') as f:
+                config = json.load(f)
+            return model, config
+        except Exception as e:
+            raise HTTPException(status_code=500, detail=f"Ошибка при загрузке модели: {e}")
+
+
+def _ensure_uploaded_file(filename: str) -> str:
+    file_path = os.path.join(UPLOAD_DIR, filename)
+    if os.path.exists(file_path):
+        return file_path
+
     try:
-        model = joblib.load(model_path)
-        with open(config_path, 'r') as f:
-            config = json.load(f)
-        return model, config
-    except Exception as e:
-        raise HTTPException(status_code=500, detail=f"Ошибка при загрузке модели: {e}")
+        response = requests.get(f"{FILE_SERVICE_URL}/download/{filename}", timeout=120, stream=True)
+        if response.status_code == 404:
+            raise HTTPException(status_code=404, detail=f"Файл данных '{filename}' не найден.")
+        response.raise_for_status()
+
+        with open(file_path, "wb") as f:
+            for chunk in response.iter_content(chunk_size=1024 * 1024):
+                if chunk:
+                    f.write(chunk)
+        return file_path
+    except requests.RequestException as e:
+        raise HTTPException(status_code=502, detail=f"Не удалось получить файл '{filename}' из file_service: {e}")
 
 
 # --- Эндпоинты ---
@@ -183,9 +246,7 @@ async def predict_or_score(request: DynamicRequest):
 @app.post("/score_file/", response_model=ScoreFileResponse)
 async def score_file(request: ScoreFileRequest):
     model, config = load_model_and_config(request.model_name)
-    file_path = os.path.join(UPLOAD_DIR, request.filename)
-    if not os.path.exists(file_path):
-        raise HTTPException(status_code=404, detail=f"Файл данных '{request.filename}' не найден.")
+    file_path = _ensure_uploaded_file(request.filename)
 
     model_type = config.get('model_type', 'classification')
     if model_type != 'anomaly_detection':

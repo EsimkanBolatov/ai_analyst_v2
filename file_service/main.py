@@ -4,6 +4,7 @@ import shutil
 import pandas as pd
 from fastapi import FastAPI, UploadFile, File, Form, HTTPException
 from fastapi.middleware.cors import CORSMiddleware
+from fastapi.responses import FileResponse
 from typing import List
 import logging
 
@@ -78,6 +79,14 @@ async def get_uploaded_files():
         return files
     except Exception as e:
         raise HTTPException(status_code=500, detail=f"Could not read upload directory: {e}")
+
+
+@app.get("/download/{filename}")
+async def download_file(filename: str):
+    file_path = os.path.join(UPLOAD_DIR, filename)
+    if not os.path.exists(file_path) or not os.path.isfile(file_path):
+        raise HTTPException(status_code=404, detail="File not found")
+    return FileResponse(path=file_path, filename=filename, media_type="text/csv")
 
 
 # --- Эндпоинт получения колонок ---

@@ -2,9 +2,13 @@ import pandas as pd
 import joblib
 import json
 import os
+import io
 from fastapi import FastAPI, HTTPException, Body
 from pydantic import BaseModel, Field
 from typing import List, Dict, Any
+from sqlalchemy import create_engine, Column, String, LargeBinary, Text
+from sqlalchemy.orm import declarative_base, sessionmaker
+import requests
 
 from sklearn.preprocessing import StandardScaler, OneHotEncoder
 from sklearn.compose import ColumnTransformer
@@ -18,7 +22,79 @@ app = FastAPI(title="Model Training Service")
 # --- Директории ---
 UPLOAD_DIR = "/app/uploads"
 MODELS_DIR = "/app/models"
+os.makedirs(UPLOAD_DIR, exist_ok=True)
 os.makedirs(MODELS_DIR, exist_ok=True)
+FILE_SERVICE_URL = os.getenv("FILE_SERVICE_URL", "http://file_service:8000")
+
+# --- Хранилище моделей ---
+# Render services do not share a local filesystem.
+# If DATABASE_URL is set, models/configs are stored in Postgres (Neon).
+DATABASE_URL = os.getenv("DATABASE_URL")
+USE_DB_STORAGE = bool(DATABASE_URL)
+
+Base = declarative_base()
+
+
+class ModelArtifact(Base):
+    __tablename__ = "model_artifacts"
+    model_name = Column(String, primary_key=True, index=True)
+    model_blob = Column(LargeBinary, nullable=False)
+    config_json = Column(Text, nullable=False)
+
+
+engine = create_engine(DATABASE_URL, pool_pre_ping=True) if USE_DB_STORAGE else None
+SessionLocal = sessionmaker(autocommit=False, autoflush=False, bind=engine) if USE_DB_STORAGE else None
+
+
+@app.on_event("startup")
+def on_startup():
+    if USE_DB_STORAGE:
+        Base.metadata.create_all(bind=engine)
+
+
+def _save_model_artifact(model_name: str, model_pipeline: Pipeline, config_json: str) -> None:
+    if not USE_DB_STORAGE:
+        return
+    buffer = io.BytesIO()
+    joblib.dump(model_pipeline, buffer)
+    model_bytes = buffer.getvalue()
+
+    db = SessionLocal()
+    try:
+        artifact = db.get(ModelArtifact, model_name)
+        if artifact is None:
+            artifact = ModelArtifact(
+                model_name=model_name,
+                model_blob=model_bytes,
+                config_json=config_json,
+            )
+            db.add(artifact)
+        else:
+            artifact.model_blob = model_bytes
+            artifact.config_json = config_json
+        db.commit()
+    finally:
+        db.close()
+
+
+def _ensure_uploaded_file(filename: str) -> str:
+    file_path = os.path.join(UPLOAD_DIR, filename)
+    if os.path.exists(file_path):
+        return file_path
+
+    try:
+        response = requests.get(f"{FILE_SERVICE_URL}/download/{filename}", timeout=120, stream=True)
+        if response.status_code == 404:
+            raise HTTPException(status_code=404, detail=f"Файл '{filename}' не найден.")
+        response.raise_for_status()
+
+        with open(file_path, "wb") as f:
+            for chunk in response.iter_content(chunk_size=1024 * 1024):
+                if chunk:
+                    f.write(chunk)
+        return file_path
+    except requests.RequestException as e:
+        raise HTTPException(status_code=502, detail=f"Не удалось получить файл '{filename}' из file_service: {e}")
 
 
 # --- Pydantic Модели ---
@@ -134,9 +210,7 @@ def generate_features(df: pd.DataFrame, config: Dict[str, Any]) -> (pd.DataFrame
 # --- Эндпоинт обучения ---
 @app.post("/train_anomaly_detector/")
 async def train_anomaly_detector(request: TrainingRequest):
-    file_path = os.path.join(UPLOAD_DIR, request.filename)
-    if not os.path.exists(file_path):
-        raise HTTPException(status_code=404, detail=f"Файл '{request.filename}' не найден.")
+    file_path = _ensure_uploaded_file(request.filename)
 
     try:
         df = pd.read_csv(file_path)
@@ -208,9 +282,10 @@ async def train_anomaly_detector(request: TrainingRequest):
         model_pipeline.fit(X)
 
         # 7. Сохранение модели и конфига
-        model_path = os.path.join(MODELS_DIR, f"{request.model_name}.joblib")
-        config_path = os.path.join(MODELS_DIR, f"{request.model_name}.json")
-        joblib.dump(model_pipeline, model_path)
+        if not USE_DB_STORAGE:
+            model_path = os.path.join(MODELS_DIR, f"{request.model_name}.joblib")
+            config_path = os.path.join(MODELS_DIR, f"{request.model_name}.json")
+            joblib.dump(model_pipeline, model_path)
         config_data = ModelConfig(
             model_type='anomaly_detection',
             algorithm_class=request.model_type,
@@ -222,8 +297,13 @@ async def train_anomaly_detector(request: TrainingRequest):
             generated_eng_features=generated_eng_features,
             feature_engineering_config=feature_engineering_config
         )
-        with open(config_path, 'w') as f:
-            f.write(config_data.model_dump_json(indent=4))
+        config_json = config_data.model_dump_json(indent=4)
+
+        if USE_DB_STORAGE:
+            _save_model_artifact(request.model_name, model_pipeline, config_json)
+        else:
+            with open(config_path, 'w') as f:
+                f.write(config_json)
 
         return {"message": f"Модель '{request.model_name}' ({request.model_type}) успешно обучена и сохранена."}
 
@@ -239,8 +319,15 @@ async def train_anomaly_detector(request: TrainingRequest):
 @app.get("/models/", response_model=Dict[str, List[str]])
 async def get_models():
     try:
-        all_files = os.listdir(MODELS_DIR)
-        model_names = [f.split('.joblib')[0] for f in all_files if f.endswith('.joblib')]
+        if USE_DB_STORAGE:
+            db = SessionLocal()
+            try:
+                model_names = [row[0] for row in db.query(ModelArtifact.model_name).all()]
+            finally:
+                db.close()
+        else:
+            all_files = os.listdir(MODELS_DIR)
+            model_names = [f.split('.joblib')[0] for f in all_files if f.endswith('.joblib')]
         return {"models": model_names}
     except Exception as e:
         raise HTTPException(status_code=500, detail=f"Не удалось прочитать список моделей: {e}")
@@ -248,13 +335,25 @@ async def get_models():
 
 @app.get("/models/{model_name}/config")
 async def get_model_config(model_name: str):
-    config_path = os.path.join(MODELS_DIR, f"{model_name}.json")
-    if not os.path.exists(config_path):
-        raise HTTPException(status_code=404, detail=f"Конфиг для модели '{model_name}' не найден.")
     try:
-        with open(config_path, 'r') as f:
-            config = json.load(f)
+        if USE_DB_STORAGE:
+            db = SessionLocal()
+            try:
+                artifact = db.get(ModelArtifact, model_name)
+                if artifact is None:
+                    raise HTTPException(status_code=404, detail=f"Конфиг для модели '{model_name}' не найден.")
+                config = json.loads(artifact.config_json)
+            finally:
+                db.close()
+        else:
+            config_path = os.path.join(MODELS_DIR, f"{model_name}.json")
+            if not os.path.exists(config_path):
+                raise HTTPException(status_code=404, detail=f"Конфиг для модели '{model_name}' не найден.")
+            with open(config_path, 'r') as f:
+                config = json.load(f)
         return config
+    except HTTPException:
+        raise
     except Exception as e:
         raise HTTPException(status_code=500, detail=f"Ошибка при чтении конфига: {e}")
 

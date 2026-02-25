@@ -3,3 +3,6 @@ uvicorn
 pandas
 scikit-learn
 joblib
+sqlalchemy
+psycopg2-binary
+requests
