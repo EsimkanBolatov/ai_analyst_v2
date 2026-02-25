@@ -5,7 +5,7 @@ services:
     plan: free
     region: oregon
     rootDir: file_service
-    dockerCommand: sh -c "uvicorn main:app --host 0.0.0.0 --port ${PORT:-8000}"
+    dockerCommand: uvicorn main:app --host 0.0.0.0 --port $PORT
     healthCheckPath: /docs
     buildFilter:
       paths:
@@ -18,7 +18,7 @@ services:
     plan: free
     region: oregon
     rootDir: groq_service
-    dockerCommand: sh -c "uvicorn main:app --host 0.0.0.0 --port ${PORT:-8000}"
+    dockerCommand: uvicorn main:app --host 0.0.0.0 --port $PORT
     healthCheckPath: /docs
     envVars:
       - key: GROQ_API_KEY
@@ -34,7 +34,7 @@ services:
     plan: free
     region: oregon
     rootDir: training_service
-    dockerCommand: sh -c "uvicorn main:app --host 0.0.0.0 --port ${PORT:-8000}"
+    dockerCommand: uvicorn main:app --host 0.0.0.0 --port $PORT
     healthCheckPath: /docs
     envVars:
       - key: DATABASE_URL
@@ -52,7 +52,7 @@ services:
     plan: free
     region: oregon
     rootDir: prediction_service
-    dockerCommand: sh -c "uvicorn main:app --host 0.0.0.0 --port ${PORT:-8000}"
+    dockerCommand: uvicorn main:app --host 0.0.0.0 --port $PORT
     healthCheckPath: /docs
     envVars:
       - key: DATABASE_URL
@@ -70,7 +70,7 @@ services:
     plan: free
     region: oregon
     rootDir: profiling_service
-    dockerCommand: sh -c "uvicorn main:app --host 0.0.0.0 --port ${PORT:-8000}"
+    dockerCommand: uvicorn main:app --host 0.0.0.0 --port $PORT
     healthCheckPath: /docs
     envVars:
       - key: FILE_SERVICE_URL
@@ -86,7 +86,7 @@ services:
     plan: free
     region: oregon
     rootDir: fraud_check_service
-    dockerCommand: sh -c "uvicorn main:app --host 0.0.0.0 --port ${PORT:-8000}"
+    dockerCommand: uvicorn main:app --host 0.0.0.0 --port $PORT
     healthCheckPath: /docs
     envVars:
       - key: DATABASE_URL
@@ -102,7 +102,7 @@ services:
     plan: free
     region: oregon
     rootDir: frontend
-    dockerCommand: sh -c "streamlit run app.py --server.address 0.0.0.0 --server.port ${PORT:-8501}"
+    dockerCommand: streamlit run app.py --server.address 0.0.0.0 --server.port $PORT
     healthCheckPath: /
     envVars:
       - key: FILE_SERVICE_URL
