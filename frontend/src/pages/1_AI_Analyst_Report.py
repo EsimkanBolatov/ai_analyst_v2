@@ -1,4 +1,3 @@
-#frontend/src/pages/1_AI_Analyst_Report.py
 import streamlit as st
 import requests
 import os
@@ -76,7 +75,6 @@ if st.button("Запустить новый анализ для выбранно
                 st.error(f"❌ Не удалось связаться с '{service_name}'. Проверьте Docker.")
             except requests.exceptions.HTTPError as e:
                  st.error(f"❌ Сервис '{service_name}' вернул ошибку: {e.response.status_code}")
-                 # ... (error detail handling) ...
             except Exception as e:
                  st.error(f"❌ Непредвиденная ошибка при анализе: {e}")
     else:
@@ -164,21 +162,40 @@ if current_analysis and selected_file == current_filename:
                      "amount": p_data.get("transaction_amount_kzt"), "hour": p_data.get("transaction_hour"),
                      "category": p_data.get("mcc_category", "Unknown")
                  })
+                 
         if plot_data_list:
-             df_plot = pd.DataFrame(plot_data_list)
-             if 'amount' in df_plot.columns and 'hour' in df_plot.columns and not df_plot[['amount', 'hour']].isnull().all().all():
-                 st.subheader("📈 Интерактивный график аномалий (Сумма vs Час)")
-                 fig = px.scatter(df_plot, x="hour", y="amount", color="category", size="amount",
-                                  hover_name="index", hover_data=["reason", "category", "amount", "hour"],
-                                  title="Аномальные транзакции: Сумма vs Час", labels={"hour": "Час", "amount": "Сумма (KZT)"})
-                 fig.update_layout(xaxis=dict(range=[-1, 24]))
-                 st.plotly_chart(fig, use_container_width=True)
-             else: st.info("Недостаточно данных для графика аномалий.")
+            df_plot = pd.DataFrame(plot_data_list)
+            
+            # Очищаем данные от NaN и подготавливаем размер точек
+            df_plot_clean = df_plot.dropna(subset=['amount', 'hour']).copy()
+            
+            if not df_plot_clean.empty:
+                # Plotly требует, чтобы size был строго >= 0. Берем абсолютное значение.
+                df_plot_clean['point_size'] = df_plot_clean['amount'].abs()
+                
+                st.subheader("📈 Интерактивный график аномалий (Сумма vs Час)")
+                fig = px.scatter(
+                    df_plot_clean, 
+                    x="hour", 
+                    y="amount", 
+                    color="category", 
+                    size="point_size", 
+                    hover_name="index", 
+                    hover_data={"reason": True, "category": True, "amount": True, "hour": True, "point_size": False},
+                    title="Аномальные транзакции: Сумма vs Час", 
+                    labels={"hour": "Час", "amount": "Сумма (KZT)"}
+                )
+                fig.update_layout(xaxis=dict(range=[-1, 24]))
+                st.plotly_chart(fig, use_container_width=True)
+            else: 
+                st.info("Недостаточно данных для графика аномалий (у найденных аномалий отсутствуют суммы или часы).")
+                 
         st.subheader("Таблица аномалий")
         anomalies_for_table = [{k: v for k, v in anom.items() if k != 'plot_data'} for anom in anomalies]
         df_anomalies = pd.DataFrame(anomalies_for_table)
         st.dataframe(df_anomalies, width=None, use_container_width=True)
-    else: st.info("Аномалии не выделены.")
+    else: 
+        st.info("Аномалии не выделены.")
 
     # -------------- Чат  ------------------------
     st.header("3. 💬 Чат с AI-Аналитиком")
@@ -188,6 +205,7 @@ if current_analysis and selected_file == current_filename:
             avatar = "👤" if msg["role"] == "user" else "🤖"
             with st.chat_message(msg["role"], avatar=avatar):
                 st.markdown(msg["content"])
+                
     if prompt := st.chat_input("Ваш вопрос..."):
         if "chat_history" not in st.session_state: st.session_state.chat_history = []
         st.session_state.chat_history.append({"role": "user", "content": prompt})
