@@ -17,11 +17,11 @@ export function LandingHero() {
             Premium fraud defense
           </p>
           <h1 className="mt-5 max-w-4xl text-4xl font-semibold leading-tight text-ink sm:text-5xl lg:text-6xl">
-            Новый контур AI-Analyst Platform для защиты бюджета и борьбы с финансовым мошенничеством.
+            AI-Analyst Platform вышел в release-контур для контроля бюджета и борьбы с финансовым мошенничеством.
           </h1>
           <p className="mt-5 max-w-2xl text-sm leading-7 text-smoke sm:text-base">
-            Backend переходит на FastAPI + JWT + PostgreSQL-roles, а основной клиент теперь
-            закладывается на Next.js App Router вместо старого Streamlit-only сценария.
+            В продукт уже входят FastAPI backend, Next.js App Router, AI-бухгалтер, moderation workflow
+            и Chromium extension для браузерной защиты.
           </p>
           <div className="mt-8 flex flex-col gap-3 sm:flex-row">
             <Link href="/register" className="button-primary">
@@ -37,8 +37,8 @@ export function LandingHero() {
           {[
             "JWT access + refresh",
             "Role-based endpoints",
-            "Tailwind premium shell",
-            "Ready for assistant + moderation",
+            "AI accountant + moderation",
+            "Browser guard + deploy ready",
           ].map((item) => (
             <div key={item} className="rounded-[24px] border border-line bg-white/70 px-5 py-4 text-sm text-ink">
               {item}

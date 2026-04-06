@@ -1,0 +1,23 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 1200 630">
+  <defs>
+    <linearGradient id="bg" x1="0" x2="1" y1="0" y2="1">
+      <stop offset="0%" stop-color="#111111"/>
+      <stop offset="100%" stop-color="#2c2c2c"/>
+    </linearGradient>
+  </defs>
+  <rect width="1200" height="630" fill="url(#bg)"/>
+  <circle cx="950" cy="150" r="170" fill="rgba(244,241,234,0.08)"/>
+  <circle cx="110" cy="520" r="220" fill="rgba(244,241,234,0.06)"/>
+  <text x="90" y="170" fill="#f4f1ea" font-size="30" font-family="IBM Plex Sans, Segoe UI, sans-serif" letter-spacing="8">
+    AI-ANALYST PLATFORM
+  </text>
+  <text x="90" y="300" fill="#f4f1ea" font-size="74" font-weight="700" font-family="Manrope, Segoe UI, sans-serif">
+    Personal Finance
+  </text>
+  <text x="90" y="385" fill="#f4f1ea" font-size="74" font-weight="700" font-family="Manrope, Segoe UI, sans-serif">
+    Fraud Defense
+  </text>
+  <text x="90" y="470" fill="#d0cbc2" font-size="32" font-family="IBM Plex Sans, Segoe UI, sans-serif">
+    JWT auth, AI accountant, moderation workflow, browser protection.
+  </text>
+</svg>

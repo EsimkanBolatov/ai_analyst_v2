@@ -1,0 +1,8 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 256 256" role="img" aria-labelledby="title desc">
+  <title id="title">AI-Analyst Platform</title>
+  <desc id="desc">Minimal black and cream shield with analytics grid.</desc>
+  <rect width="256" height="256" rx="56" fill="#111111"/>
+  <path d="M128 36 196 66v54c0 44-25 80-68 100-43-20-68-56-68-100V66l68-30Z" fill="#f4f1ea"/>
+  <path d="M92 93h72M92 128h72M92 163h42" stroke="#111111" stroke-width="12" stroke-linecap="round"/>
+  <circle cx="172" cy="163" r="12" fill="#111111"/>
+</svg>

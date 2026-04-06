@@ -1,214 +1,184 @@
-# AI-Analyst v2.2: Платформа для Интеллектуального Анализа Данных и Обнаружения Аномалий
+# AI-Analyst Platform
 
-**AI-Analyst - это платформа на базе микросервисов, предназначенная для комплексного анализа табличных данных (CSV) с упором на выявление аномалий и потенциально мошеннических операций. Она объединяет автоматическое профилирование, AI-анализ с использованием LLM (Groq), обучение моделей машинного обучения (с Feature Engineering) и инструменты ручной проверки.**
+AI-Analyst Platform is a full-stack anti-fraud and personal finance control system built around:
 
-## Ключевые Возможности
+- `Next.js App Router` frontend
+- `FastAPI + PostgreSQL` backend API
+- `Groq` powered AI accountant and fraud triage
+- `Chromium Manifest V3` browser extension
 
-* Загрузка данных: Поддержка загрузки больших CSV-файлов через веб-интерфейс.
-* Автоматическое Профилирование: Генерация детальных HTML-отчетов о качестве и структуре данных с помощью ydata-profiling.
-* AI-Анализ (Groq): Получение автоматических инсайтов, выявление аномалий, идей для Feature Engineering и оценка рисков с использованием LLM Groq (llama-3.1-8b-instant).
-* Интерактивный Чат с AI: Возможность задавать уточняющие вопросы AI-аналитику на основе первоначального отчета.
-* Обучение Моделей Обнаружения Аномалий: Обучение моделей без учителя (IsolationForest, LocalOutlierFactor, OneClassSVM) прямо из интерфейса.
-* Автоматический Feature Engineering: Опциональная генерация признаков (время суток, агрегаты по карте за час, время с последней транзакции, отклонение от среднего) для улучшения качества моделей.
-* Предсказание и Оценка: Применение обученных моделей для оценки аномальности как всего файла (с визуализацией распределения оценок), так и отдельных записей.
-* Ручная Проверка Данных: Быстрая проверка телефонов, email, URL и текстов на признаки мошенничества с использованием NLP (spaCy) и балльной системы оценки риска.
-* Черные Списки (PostgreSQL): Хранение черных списков в базе данных PostgreSQL.
-* Обратная Связь: Возможность пополнять черные списки через интерфейс ручной проверки.
-* Информативный Дашборд: Главная страница отображает список загруженных файлов и обученных моделей.
-* Интерактивные Визуализации: Использование Plotly для отображения распределений и аномалий.
+The repository still contains the legacy Streamlit/ML prototype, but the current product contour is the new `backend_v3 + web_frontend + browser_extension` stack.
 
-## Архитектура
+## Product Scope
 
-* Платформа использует микросервисную архитектуру, оркестрируемую с помощью Docker Compose.
-* frontend: Пользовательский интерфейс на Streamlit.
-* file_service: Обработка загрузки файлов (FastAPI).
-* profiling_service: Генерация отчетов ydata-profiling (FastAPI).
-* groq_service: Взаимодействие с Groq API (FastAPI).
-* training_service: Обучение ML-моделей (FastAPI, Scikit-learn).
-* prediction_service: Применение ML-моделей (FastAPI, Scikit-learn).
-* fraud_check_service: Ручная проверка данных (FastAPI, spaCy, SQLAlchemy).
-* db: База данных PostgreSQL для черных списков.
-* Volumes: Docker Volumes (uploads_data, models_data, reports_data, postgres_data) для обмена данными между сервисами.
+The current release covers all five stages from the specification:
 
-## Технологический Стек
+1. Auth foundation: JWT, roles, protected endpoints
+2. AI accountant: budgets, transactions, statement import, persistent chat, voice input/output
+3. Crowd moderation: user reports, AI categorization, moderator resolution, final blacklist
+4. Browser extension: popup check, context menu, continuous page scanning
+5. Polish and deploy: loading states, SEO metadata, responsive UI, Docker/Render configuration
 
-* Язык: Python 3.10+
-* Backend: FastAPI, Uvicorn
-* Frontend: Streamlit
-* База данных: PostgreSQL 14+, SQLAlchemy, psycopg2-binary
-* ML/Анализ: Scikit-learn, Pandas, Joblib, ydata-profiling
-* NLP: spaCy (ru_core_news_sm)
-* AI (LLM): Groq API
-* Контейнеризация: Docker, Docker Compose
-* Другое: Requests, Pydantic, phonenumbers, validators
+## Active Architecture
 
-## Структура Проекта (Основные компоненты)
+Primary services:
 
-/ai_analyst_v2/
+- `backend_v3`
+  FastAPI API for auth, assistant, moderation and blacklist operations
+- `web_frontend`
+  Next.js App Router client for end users and moderators
+- `file_service`
+  Shared file storage used for statement upload/import
+- `db`
+  PostgreSQL database
+- `browser_extension`
+  Unpacked Chromium extension for browser-side fraud checks
 
-├── docker-compose.yml     # Файл оркестровки Docker
+Legacy services kept in the repo:
 
-├── .env                  # Файл с переменными окружения (API-ключи, настройки БД) - СОЗДАТЬ!
+- `frontend`
+- `groq_service`
+- `training_service`
+- `prediction_service`
+- `profiling_service`
+- `fraud_check_service`
 
-│
+## Local Run
 
-├── frontend/              # Сервис Frontend (Streamlit)
+Create `.env` in the repository root using `.env.example`.
 
-│   ├── Dockerfile
+Required variables:
 
-│   ├── requirements.txt
-
-│   └── src/
-
-│       ├── app.py         # Главная страница (Дашборд)
-
-│       └── pages/         # Остальные страницы приложения
-
-│           ├── 0_Data_Profile.py
-
-│           ├── 1_AI_Analyst_Report.py
-
-│           ├── 2_Train_Model.py
-
-│           ├── 3_Prediction.py
-
-│           └── 4_Fraud_Check.py
-
-│
-
-├── file_service/          # Сервис загрузки файлов
-
-│   ├── Dockerfile
-
-│   ├── requirements.txt
-
-│   └── main.py
-
-│
-
-├── profiling_service/     # Сервис профилирования
-
-│   ├── ... (Dockerfile, reqs, main.py) ...
-
-│
-
-├── groq_service/          # Сервис AI-анализа
-
-│   ├── ... (Dockerfile, reqs, main.py) ...
-
-│
-
-├── training_service/      # Сервис обучения моделей
-
-│   ├── ... (Dockerfile, reqs, main.py) ...
-
-│
-
-├── prediction_service/    # Сервис предсказания
-
-│   ├── ... (Dockerfile, reqs, main.py) ...
-
-│
-
-└── fraud_check_service/   # Сервис ручной проверки
-
-        ├── Dockerfile
-
-        ├── requirements.txt
-
-        ├── main.py
-
-        ├── wait-for-it.sh     # Скрипт ожидания БД
-
-
-
-
-##  Установка и Запуск
-
-#### Предварительные требования:
-
-Установленный Docker
-Установленный Docker Compose
-
-##### Клонировать репозиторий:
-
-git clone <URL_вашего_репозитория>
-cd ai_analyst_v2
-
-##### Создать файл .env: 
-
-В корневой папке проекта (ai_analyst_v2/) создайте файл с именем .env и добавьте в него следующие переменные, заменив значения на ваши:
-
-### Ключ для Groq API (получите на groq.com)
-GROQ_API_KEY=gsk_ВАШ_КЛЮЧ
-
-### Настройки для PostgreSQL (можете оставить по умолчанию)
-POSTGRES_USER=user
-
-POSTGRES_PASSWORD=password
-
-POSTGRES_DB=ai_analyst
-
+```env
+GROQ_API_KEY=replace_with_your_groq_api_key
+POSTGRES_USER=postgres
+POSTGRES_PASSWORD=replace_with_strong_password
+POSTGRES_DB=ai_analyst_db
 POSTGRES_HOST=db
+JWT_SECRET_KEY=replace_with_long_access_secret
+JWT_REFRESH_SECRET_KEY=replace_with_long_refresh_secret
+FILE_SERVICE_URL=http://file_service:8000
+NEXT_PUBLIC_API_BASE_URL=http://localhost:8010/api/v1
+NEXT_PUBLIC_SITE_URL=http://localhost:3000
+ALLOWED_ORIGINS=http://localhost:3000,http://127.0.0.1:3000,http://localhost:8501
+```
 
-Собрать и запустить контейнеры:
-Выполните в терминале (в корневой папке проекта):
+Start the current product contour:
 
-docker-compose up --build -d
+```bash
+docker-compose up --build backend_api web_frontend file_service db
+```
 
+If you still need the legacy prototype too:
 
---build: Пересобирает образы, если код или Dockerfile изменились.
+```bash
+docker-compose up --build
+```
 
--d: Запускает контейнеры в фоновом режиме.
+Main local URLs:
 
-Первый запуск может занять некоторое время из-за скачивания образов и установки зависимостей (включая spaCy).
+- Next.js web app: `http://localhost:3000`
+- FastAPI backend: `http://localhost:8010`
+- FastAPI docs: `http://localhost:8010/docs`
+- File service: `http://localhost:8000`
+- Legacy Streamlit app: `http://localhost:8501`
 
-Доступ к приложению:
+## Main API Areas
 
-Веб-интерфейс (Frontend) будет доступен по адресу: http://localhost:8501
+Auth:
 
-Документация API бэкенд-сервисов (Swagger UI) доступна по их внешним портам (если они проброшены в docker-compose.yml, например, http://localhost:8005/docs для fraud_check_service).
+- `POST /api/v1/auth/register`
+- `POST /api/v1/auth/login`
+- `POST /api/v1/auth/refresh`
+- `GET /api/v1/auth/me`
 
-(Опционально) Наполнить БД тестовыми данными:
+Assistant:
 
-Откройте Swagger UI для fraud_check_service: http://localhost:8005/docs
+- `GET /api/v1/assistant/overview`
+- `PUT /api/v1/assistant/budget`
+- `POST /api/v1/assistant/chat`
+- `POST /api/v1/assistant/import-transactions`
 
-Найдите эндпоинт POST /test-data/, нажмите "Try it out", затем "Execute". Это добавит несколько записей в черные списки.
+Fraud and moderation:
 
-## ️ Использование
+- `POST /api/v1/fraud/report`
+- `GET /api/v1/fraud/reports/mine`
+- `POST /api/v1/fraud/check`
+- `POST /api/v1/fraud/check-batch`
+- `GET /api/v1/fraud/moderation/queue`
+- `POST /api/v1/fraud/moderation/resolve/{id}`
 
-Откройте Дашборд: Перейдите на http://localhost:8501.
+## Browser Extension
 
-Загрузите файл: В секции "Загрузка и анализ нового файла" выберите ваш CSV-файл и нажмите "Начать загрузку и анализ". Дождитесь завершения автоматических анализов.
+The Chromium extension is located in `browser_extension`.
 
-Изучите Data Profile: Перейдите на страницу "Data Profile", чтобы увидеть детальный отчет о данных.
+Features:
 
-Изучите AI-Отчет: Перейдите на "AI Analyst Report". Просмотрите выводы AI, графики (Box Plot, Scatter Plot аномалий). Задайте уточняющие вопросы в чате.
+- manual popup check
+- right-click context menu for selected text
+- continuous DOM scanning of links and phone numbers
+- visual highlighting for blacklist matches
 
-Обучите Модель: Перейдите на "Train Model". Выберите файл, настройте признаки (числовые, категориальные, даты), опционально включите Feature Engineering (выбрав нужные колонки), введите имя модели, выберите алгоритм (IsolationForest, LOF, OneClassSVM) и нажмите "Начать обучение".
+How to install:
 
-Используйте Модель: Перейдите на "Prediction".
+1. Open `chrome://extensions` or `edge://extensions`
+2. Enable `Developer mode`
+3. Click `Load unpacked`
+4. Select the `browser_extension` folder
 
-Вкладка "Анализ всего файла": Выберите файл и обученную модель, нажмите "Рассчитать..." для получения гистограммы распределения оценок аномальности.
+The extension expects the backend API at:
 
-Вкладка "Одиночная оценка": Выберите модель, введите данные транзакции вручную и получите оценку аномальности.
+- `http://localhost:8010/api/v1` locally
+- or the configured Render URL from the popup settings
 
-Проверьте Данные Вручную: Перейдите на "Fraud Check". Выберите тип данных, введите значение, нажмите "Проверить". Если считаете результат неверным, нажмите "Пометить и добавить в черный список".
+## Deployment
 
-##  Конфигурация
+`render.yaml` now describes the current release contour:
 
-Все основные настройки (API-ключи, параметры подключения к БД) находятся в файле .env в корне проекта.
+- `ai-analyst-v3-file-service`
+- `ai-analyst-v3-api`
+- `ai-analyst-v3-web`
 
-##  Возможные Улучшения
+The new web client is already containerized in `web_frontend/Dockerfile`.
 
-Добавление поддержки других моделей ML (например, Autoencoders).
+## Frontend Polish Included
 
-Реализация более сложных техник Feature Engineering.
+The Next.js application includes:
 
-Интеграция с системами оповещения/реагирования.
+- route metadata
+- Open Graph metadata
+- `robots.ts`
+- `sitemap.ts`
+- `manifest.ts`
+- route-level loading skeletons
+- responsive layouts for dashboard and moderation areas
 
-Внедрение MLOps практик (мониторинг моделей, переобучение).
+## Verification Commands
 
-Добавление unit- и интеграционных тестов.
+Backend:
 
-Настройка централизованного логирования и мониторинга (ELK, Prometheus/Grafana).
+```bash
+python -m compileall backend_v3/app
+```
+
+Frontend:
+
+```bash
+cd web_frontend
+npm install
+npm run build
+```
+
+Extension syntax checks:
+
+```bash
+node --check browser_extension/background.js
+node --check browser_extension/content.js
+node --check browser_extension/popup.js
+```
+
+## Notes
+
+- The repository is intentionally transitional: the legacy prototype is still present, but the release-ready path is the Next.js/FastAPI stack.
+- For production, set strong JWT secrets and a managed PostgreSQL database.
+- For public deployment, update `NEXT_PUBLIC_SITE_URL`, `NEXT_PUBLIC_API_BASE_URL` and `ALLOWED_ORIGINS` to real domains.

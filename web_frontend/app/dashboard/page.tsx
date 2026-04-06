@@ -103,11 +103,11 @@ export default function DashboardPage() {
                 Protected Workspace
               </p>
               <h1 className="mt-4 max-w-3xl text-4xl font-semibold leading-tight text-ink sm:text-5xl">
-                Второй этап запущен: личный бюджет, импорт выписок и строгий AI-бухгалтер.
+                Release contour: бюджет, AI-бухгалтер, fraud reports и moderator-ready workflow.
               </h1>
               <p className="mt-4 max-w-2xl text-sm leading-7 text-smoke sm:text-base">
-                Этот кабинет уже работает поверх JWT и ролей, а теперь ведет persistent историю
-                диалога, контролирует лимиты и фиксирует траты из чата или файлов.
+                Кабинет работает поверх JWT и ролей, управляет бюджетом, импортирует выписки,
+                принимает fraud reports и связывается с moderator pipeline без legacy-зависимости от Streamlit.
               </p>
             </div>
             <LogoutButton />

@@ -86,7 +86,7 @@ export default function ModerationPage() {
                 Moderator Workspace
               </p>
               <h1 className="mt-4 max-w-4xl text-4xl font-semibold leading-tight text-ink sm:text-5xl">
-                Двухэтапная модерация пользовательских жалоб и пополнение blacklist.
+                Release moderation board для двухэтапной проверки пользовательских жалоб.
               </h1>
               <p className="mt-4 max-w-2xl text-sm leading-7 text-smoke sm:text-base">
                 Здесь модератор получает вывод AI, принимает решение и переводит кейс в финальный
