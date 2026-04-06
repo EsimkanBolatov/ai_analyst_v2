@@ -1,6 +1,6 @@
 "use client";
 
-import { useEffect, useState } from "react";
+import { useCallback, useEffect, useMemo, useState } from "react";
 import { useRouter } from "next/navigation";
 
 import { LogoutButton } from "@/components/logout-button";
@@ -19,6 +19,32 @@ export default function ModerationPage() {
   const [error, setError] = useState<string | null>(null);
   const [isLoading, setIsLoading] = useState(true);
 
+  const handleSession = useCallback(
+    (session: Parameters<typeof setSession>[0]) => {
+      setSession(session);
+      setUser(session.user);
+      setCurrentUser(session.user);
+    },
+    [setSession, setUser],
+  );
+
+  const handleAuthFailure = useCallback(() => {
+    clearSession();
+    router.replace("/login");
+  }, [clearSession, router]);
+
+  const boardSession = useMemo(
+    () =>
+      accessToken && refreshToken
+        ? {
+            accessToken,
+            refreshToken,
+            onSession: handleSession,
+          }
+        : null,
+    [accessToken, handleSession, refreshToken],
+  );
+
   useEffect(() => {
     const loadUser = async () => {
       if (!accessToken || !refreshToken) {
@@ -29,7 +55,7 @@ export default function ModerationPage() {
       setIsLoading(true);
       setError(null);
       let currentAccessToken = accessToken;
-      let nextUser = user;
+      let nextUser: User | null = null;
 
       try {
         nextUser = await fetchCurrentUser(currentAccessToken);
@@ -42,12 +68,11 @@ export default function ModerationPage() {
 
         try {
           const refreshed = await refreshSession(refreshToken);
-          setSession(refreshed);
+          handleSession(refreshed);
           currentAccessToken = refreshed.access_token;
           nextUser = refreshed.user;
         } catch (refreshError) {
-          clearSession();
-          router.replace("/login");
+          handleAuthFailure();
           setError(refreshError instanceof Error ? refreshError.message : "Сессия истекла.");
           setIsLoading(false);
           return;
@@ -74,7 +99,7 @@ export default function ModerationPage() {
     };
 
     void loadUser();
-  }, [accessToken, clearSession, refreshToken, router, setSession, setUser, user]);
+  }, [accessToken, handleAuthFailure, handleSession, refreshToken, router, setUser]);
 
   return (
     <SessionGuard>
@@ -104,7 +129,7 @@ export default function ModerationPage() {
         ) : null}
 
         <div className="mt-8">
-          {isLoading || !currentUser || !accessToken || !refreshToken ? (
+          {isLoading || !currentUser || !boardSession ? (
             <div className="space-y-4">
               {[1, 2, 3].map((item) => (
                 <div key={item} className="h-56 animate-pulse rounded-3xl border border-line bg-white/40" />
@@ -112,19 +137,8 @@ export default function ModerationPage() {
             </div>
           ) : (
             <ModerationBoard
-              session={{
-                accessToken,
-                refreshToken,
-                onSession: (session) => {
-                  setSession(session);
-                  setUser(session.user);
-                  setCurrentUser(session.user);
-                },
-              }}
-              onAuthFailure={() => {
-                clearSession();
-                router.replace("/login");
-              }}
+              session={boardSession}
+              onAuthFailure={handleAuthFailure}
             />
           )}
         </div>

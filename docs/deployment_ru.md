@@ -37,7 +37,19 @@ Legacy-сервисы можно поднимать только при необ
 - `NEXT_PUBLIC_API_BASE_URL`
 - `NEXT_PUBLIC_SITE_URL`
 - `ALLOWED_ORIGINS`
+- `SEED_TEST_DATA` — включает локальные тестовые аккаунты и демонстрационные данные
 - `DATABASE_URL` — опционально для cloud/managed DB
+
+Для локального Docker-стенда `SEED_TEST_DATA` включен по умолчанию через `docker-compose.yml`. Для production эта переменная должна быть выключена.
+
+Тестовые аккаунты:
+
+```text
+user@ai-analyst.app       / Test12345!  / User
+moderator@ai-analyst.app  / Test12345!  / Moderator
+risk@ai-analyst.app       / Test12345!  / RiskManager
+admin@ai-analyst.app      / Test12345!  / Admin
+```
 
 ## 4. Запуск через Docker
 

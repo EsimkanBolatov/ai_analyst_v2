@@ -1,6 +1,6 @@
 "use client";
 
-import { useEffect, useState } from "react";
+import { useCallback, useEffect, useState } from "react";
 import { useRouter } from "next/navigation";
 
 import { AssistantWorkspace } from "@/components/assistant-workspace";
@@ -24,6 +24,20 @@ export default function DashboardPage() {
   const [isLoading, setIsLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
 
+  const handleSession = useCallback(
+    (session: Parameters<typeof setSession>[0]) => {
+      setSession(session);
+      setUser(session.user);
+      setCurrentUser(session.user);
+    },
+    [setSession, setUser],
+  );
+
+  const handleAuthFailure = useCallback(() => {
+    clearSession();
+    router.replace("/login");
+  }, [clearSession, router]);
+
   useEffect(() => {
     const loadDashboard = async () => {
       if (!accessToken || !refreshToken) {
@@ -35,7 +49,7 @@ export default function DashboardPage() {
       setError(null);
 
       let currentAccessToken = accessToken;
-      let nextUser = user;
+      let nextUser: User | null = null;
 
       try {
         nextUser = await fetchCurrentUser(currentAccessToken);
@@ -48,12 +62,11 @@ export default function DashboardPage() {
 
         try {
           const refreshed = await refreshSession(refreshToken);
-          setSession(refreshed);
+          handleSession(refreshed);
           currentAccessToken = refreshed.access_token;
           nextUser = refreshed.user;
         } catch (refreshError) {
-          clearSession();
-          router.replace("/login");
+          handleAuthFailure();
           setError(
             refreshError instanceof Error
               ? refreshError.message
@@ -91,7 +104,7 @@ export default function DashboardPage() {
     };
 
     void loadDashboard();
-  }, [accessToken, clearSession, refreshToken, router, setSession, setUser, user]);
+  }, [accessToken, handleAuthFailure, handleSession, refreshToken, setUser]);
 
   return (
     <SessionGuard>
@@ -137,29 +150,15 @@ export default function DashboardPage() {
                 adminSummary={summary}
                 accessToken={accessToken}
                 refreshToken={refreshToken}
-                onSession={(session) => {
-                  setSession(session);
-                  setUser(session.user);
-                  setCurrentUser(session.user);
-                }}
-                onAuthFailure={() => {
-                  clearSession();
-                  router.replace("/login");
-                }}
+                onSession={handleSession}
+                onAuthFailure={handleAuthFailure}
               />
               <FraudReportCenter
                 user={currentUser}
                 accessToken={accessToken}
                 refreshToken={refreshToken}
-                onSession={(session) => {
-                  setSession(session);
-                  setUser(session.user);
-                  setCurrentUser(session.user);
-                }}
-                onAuthFailure={() => {
-                  clearSession();
-                  router.replace("/login");
-                }}
+                onSession={handleSession}
+                onAuthFailure={handleAuthFailure}
               />
             </div>
           )}

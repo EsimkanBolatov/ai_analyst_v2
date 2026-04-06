@@ -21,6 +21,11 @@ def init_db() -> None:
                 db.add(Role(name=role_name, description=description))
         db.commit()
 
+    if settings.seed_test_data:
+        from app.core.test_seed import seed_test_data
+
+        seed_test_data(SessionLocal)
+
 
 def get_db() -> Generator[Session, None, None]:
     db = SessionLocal()

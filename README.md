@@ -64,7 +64,21 @@ FILE_SERVICE_URL=http://file_service:8000
 NEXT_PUBLIC_API_BASE_URL=http://localhost:8010/api/v1
 NEXT_PUBLIC_SITE_URL=http://localhost:3000
 ALLOWED_ORIGINS=http://localhost:3000,http://127.0.0.1:3000,http://localhost:8501
+SEED_TEST_DATA=true
 ```
+
+`SEED_TEST_DATA=true` включает локальные тестовые аккаунты и демонстрационные данные. В production эту переменную нужно выключить или не задавать.
+
+Тестовые аккаунты для локального стенда:
+
+```text
+user@ai-analyst.app       / Test12345!  / User
+moderator@ai-analyst.app  / Test12345!  / Moderator
+risk@ai-analyst.app       / Test12345!  / RiskManager
+admin@ai-analyst.app      / Test12345!  / Admin
+```
+
+Seed также создает тестовый бюджет, несколько транзакций, историю ассистента, жалобы в модерации и одну запись в blacklist.
 
 ### 2. Запустите основной контур
 

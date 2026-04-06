@@ -25,6 +25,7 @@ class Settings(BaseSettings):
     groq_api_key: str | None = None
     groq_model: str = "llama-3.1-8b-instant"
     file_service_url: str = "http://file_service:8000"
+    seed_test_data: bool = False
 
     jwt_secret_key: str = "change-me-in-production"
     jwt_refresh_secret_key: str = "change-me-refresh-in-production"
