@@ -1,0 +1,64 @@
+@tailwind base;
+@tailwind components;
+@tailwind utilities;
+
+:root {
+  color-scheme: light;
+}
+
+html {
+  background: #f4f1ea;
+}
+
+body {
+  min-height: 100vh;
+  background:
+    radial-gradient(circle at top left, rgba(17, 17, 17, 0.08), transparent 28%),
+    linear-gradient(180deg, #f8f5ef 0%, #f0ece4 100%);
+  color: #111111;
+}
+
+::selection {
+  background: #111111;
+  color: #f4f1ea;
+}
+
+@layer base {
+  * {
+    @apply border-line;
+  }
+
+  body {
+    @apply antialiased;
+  }
+
+  a {
+    @apply transition-opacity duration-200;
+  }
+
+  a:hover {
+    @apply opacity-70;
+  }
+}
+
+@layer components {
+  .shell {
+    @apply mx-auto w-full max-w-shell px-4 sm:px-6 lg:px-8;
+  }
+
+  .panel {
+    @apply rounded-[28px] border border-line bg-panel/90 shadow-premium backdrop-blur;
+  }
+
+  .button-primary {
+    @apply inline-flex items-center justify-center rounded-full bg-ink px-5 py-3 text-sm font-semibold text-paper transition hover:-translate-y-0.5 hover:bg-black;
+  }
+
+  .button-secondary {
+    @apply inline-flex items-center justify-center rounded-full border border-ink px-5 py-3 text-sm font-semibold text-ink transition hover:-translate-y-0.5 hover:bg-ink hover:text-paper;
+  }
+
+  .input-field {
+    @apply w-full rounded-2xl border border-line bg-white/80 px-4 py-3 text-sm text-ink outline-none transition focus:border-ink focus:ring-2 focus:ring-black/10;
+  }
+}
