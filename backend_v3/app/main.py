@@ -1,26 +1,39 @@
+from contextlib import asynccontextmanager
+
 from fastapi import FastAPI
 from fastapi.middleware.cors import CORSMiddleware
-# Импортируем роутеры (создадим их позже)
-# from app.api import upload_router, predict_router
 
-app = FastAPI(title="AI-Analyst v3.0 Backend")
+from app.api.router import api_router
+from app.core.config import settings
+from app.core.database import init_db
 
-# Настройка CORS для взаимодействия с React (localhost:3000)
-origins = [
-    "http://localhost:3000",
-    "http://localhost:8000",
-]
+
+@asynccontextmanager
+async def lifespan(_: FastAPI):
+    init_db()
+    yield
+
+
+app = FastAPI(
+    title=settings.app_name,
+    version="3.0.0",
+    lifespan=lifespan,
+)
 
 app.add_middleware(
     CORSMiddleware,
-    allow_origins=origins,
+    allow_origins=settings.allowed_origins,
     allow_credentials=True,
     allow_methods=["*"],
     allow_headers=["*"],
 )
 
-@app.get("/")
-def read_root():
-    return {"status": "ok", "message": "AI-Analyst Backend is running"}
+app.include_router(api_router, prefix=settings.api_v1_prefix)
 
-# app.include_router(upload_router.router)
+
+@app.get("/", tags=["root"])
+def read_root() -> dict[str, str]:
+    return {
+        "status": "ok",
+        "message": f"{settings.app_name} is running",
+    }
