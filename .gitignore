@@ -14,3 +14,5 @@ build/
 *.db
 *.bak
 *.backup
+node_modules/
+.next/
