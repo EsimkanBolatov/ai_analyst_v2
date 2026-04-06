@@ -74,3 +74,60 @@ export type TransactionImportResponse = {
   current_month_spent: number;
   recent_transactions: Transaction[];
 };
+
+export type FraudDataType = "phone" | "url" | "email" | "text";
+export type ModerationStatus = "pending" | "approved" | "rejected";
+export type ModerationFilterStatus = "all" | "pending" | "approved" | "rejected";
+
+export type FraudQueueUser = {
+  id: number;
+  email: string;
+};
+
+export type BlacklistEntry = {
+  id: number;
+  data_type: string;
+  value: string;
+  category?: string | null;
+  source_report_id?: number | null;
+  approved_by_user_id?: number | null;
+  created_at: string;
+};
+
+export type ModerationItem = {
+  id: number;
+  data_type: FraudDataType | string;
+  value: string;
+  user_comment?: string | null;
+  ai_category?: string | null;
+  ai_confidence?: number | null;
+  ai_summary?: string | null;
+  status: ModerationStatus | string;
+  moderator_comment?: string | null;
+  resolved_by_user_id?: number | null;
+  resolved_at?: string | null;
+  created_at: string;
+  updated_at: string;
+  reporter: FraudQueueUser;
+  resolver?: FraudQueueUser | null;
+  blacklist_entry?: BlacklistEntry | null;
+};
+
+export type FraudReportResponse = {
+  item: ModerationItem;
+  already_blacklisted: boolean;
+};
+
+export type ModerationQueueResponse = {
+  items: ModerationItem[];
+  total_count: number;
+  pending_count: number;
+  approved_count: number;
+  rejected_count: number;
+  blacklist_count: number;
+};
+
+export type ModerationResolveResponse = {
+  item: ModerationItem;
+  blacklist_entry?: BlacklistEntry | null;
+};

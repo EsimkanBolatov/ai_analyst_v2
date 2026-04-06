@@ -6,14 +6,16 @@ import clsx from "clsx";
 
 import { useAuthStore } from "@/lib/auth-store";
 
-const links = [
-  { href: "/", label: "Главная" },
-  { href: "/dashboard", label: "Dashboard" },
-];
-
 export function Header() {
   const pathname = usePathname();
   const { hydrated, user } = useAuthStore();
+  const links = [
+    { href: "/", label: "Главная" },
+    { href: "/dashboard", label: "Dashboard" },
+    ...(user && ["Moderator", "Admin", "RiskManager"].includes(user.role.name)
+      ? [{ href: "/moderation", label: "Moderation" }]
+      : []),
+  ];
 
   return (
     <header className="shell pt-4">

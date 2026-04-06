@@ -3,6 +3,11 @@ import type {
   AssistantChatResponse,
   AssistantOverview,
   Budget,
+  FraudDataType,
+  FraudReportResponse,
+  ModerationFilterStatus,
+  ModerationQueueResponse,
+  ModerationResolveResponse,
   TokenPair,
   TransactionImportResponse,
   User,
@@ -20,7 +25,7 @@ export class ApiError extends Error {
   }
 }
 
-type SessionRequestContext = {
+export type SessionRequestContext = {
   accessToken: string;
   refreshToken: string;
   onSession: (session: TokenPair) => void;
@@ -154,4 +159,50 @@ export async function importTransactions(
     method: "POST",
     body: formData,
   });
+}
+
+export async function submitFraudReport(
+  session: SessionRequestContext,
+  payload: { data_type: FraudDataType; value: string; user_comment?: string },
+): Promise<FraudReportResponse> {
+  return apiRequestWithSession<FraudReportResponse>("/fraud/report", session, {
+    method: "POST",
+    body: JSON.stringify(payload),
+  });
+}
+
+export async function fetchMyFraudReports(
+  session: SessionRequestContext,
+): Promise<FraudReportResponse["item"][]> {
+  return apiRequestWithSession<FraudReportResponse["item"][]>("/fraud/reports/mine", session);
+}
+
+export async function fetchModerationQueue(
+  session: SessionRequestContext,
+  params: { status?: ModerationFilterStatus; dataType?: string } = {},
+): Promise<ModerationQueueResponse> {
+  const searchParams = new URLSearchParams();
+  if (params.status) {
+    searchParams.set("status", params.status);
+  }
+  if (params.dataType) {
+    searchParams.set("data_type", params.dataType);
+  }
+  const suffix = searchParams.toString() ? `?${searchParams.toString()}` : "";
+  return apiRequestWithSession<ModerationQueueResponse>(`/fraud/moderation/queue${suffix}`, session);
+}
+
+export async function resolveModerationItem(
+  session: SessionRequestContext,
+  reportId: number,
+  payload: { action: "approved" | "rejected"; moderator_comment?: string },
+): Promise<ModerationResolveResponse> {
+  return apiRequestWithSession<ModerationResolveResponse>(
+    `/fraud/moderation/resolve/${reportId}`,
+    session,
+    {
+      method: "POST",
+      body: JSON.stringify(payload),
+    },
+  );
 }
