@@ -23,8 +23,11 @@ class ModerationQueue(Base):
     user_comment: Mapped[str | None] = mapped_column(Text, nullable=True)
     ai_category: Mapped[str | None] = mapped_column(String(120), nullable=True)
     ai_confidence: Mapped[float | None] = mapped_column(Float, nullable=True)
+    ai_summary: Mapped[str | None] = mapped_column(Text, nullable=True)
     status: Mapped[str] = mapped_column(String(20), default=ModerationStatus.pending.value, nullable=False)
+    moderator_comment: Mapped[str | None] = mapped_column(Text, nullable=True)
     resolved_by_user_id: Mapped[int | None] = mapped_column(ForeignKey("users.id"), nullable=True)
+    resolved_at: Mapped[datetime | None] = mapped_column(DateTime(timezone=True), nullable=True)
     created_at: Mapped[datetime] = mapped_column(
         DateTime(timezone=True),
         server_default=func.now(),
@@ -39,3 +42,4 @@ class ModerationQueue(Base):
 
     reporter = relationship("User", foreign_keys=[user_id], back_populates="submitted_reports")
     resolver = relationship("User", foreign_keys=[resolved_by_user_id], back_populates="resolved_reports")
+    blacklist_entry = relationship("BlacklistEntry", back_populates="source_report", uselist=False)
