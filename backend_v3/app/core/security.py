@@ -19,12 +19,18 @@ def verify_password(plain_password: str, hashed_password: str) -> bool:
     return password_context.verify(plain_password, hashed_password)
 
 
-def _create_token(subject: str, role: str, expires_delta: timedelta, secret: str) -> str:
+def _create_token(
+    subject: str,
+    role: str,
+    expires_delta: timedelta,
+    secret: str,
+    token_type: str,
+) -> str:
     expire_at = datetime.now(UTC) + expires_delta
     payload = {
         "sub": subject,
         "role": role,
-        "type": "access" if secret == settings.jwt_secret_key else "refresh",
+        "type": token_type,
         "exp": expire_at,
         "iat": datetime.now(UTC),
     }
@@ -37,6 +43,7 @@ def create_access_token(subject: str, role: str) -> str:
         role=role,
         expires_delta=timedelta(minutes=settings.access_token_expire_minutes),
         secret=settings.jwt_secret_key,
+        token_type="access",
     )
 
 
@@ -46,6 +53,7 @@ def create_refresh_token(subject: str, role: str) -> str:
         role=role,
         expires_delta=timedelta(minutes=settings.refresh_token_expire_minutes),
         secret=settings.jwt_refresh_secret_key,
+        token_type="refresh",
     )
 
 
