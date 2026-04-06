@@ -38,6 +38,11 @@ class User(Base):
         back_populates="resolver",
         foreign_keys="ModerationQueue.resolved_by_user_id",
     )
+    approved_blacklist_entries = relationship(
+        "BlacklistEntry",
+        back_populates="approved_by",
+        foreign_keys="BlacklistEntry.approved_by_user_id",
+    )
     assistant_messages = relationship(
         "AssistantMessage",
         back_populates="user",
