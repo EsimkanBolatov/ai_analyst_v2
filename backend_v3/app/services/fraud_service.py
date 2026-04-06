@@ -5,7 +5,6 @@ from datetime import UTC, datetime
 from urllib.parse import urlparse
 
 from groq import Groq, GroqError
-from sqlalchemy import func
 from sqlalchemy.orm import Session
 
 from app.core.config import settings
@@ -24,6 +23,7 @@ class FraudClassification:
 
 
 PHONE_PATTERN = re.compile(r"\D+")
+ALREADY_BLACKLISTED_SUMMARY = "Совпадение с уже утвержденным blacklist."
 URL_SCAM_KEYWORDS = [
     "secure",
     "verify",
@@ -77,7 +77,7 @@ def _fallback_classification(data_type: str, value: str, comment: str | None) ->
         return FraudClassification(
             category="Подозрительная ссылка",
             confidence=0.58,
-            summary="Ссылка выглядит нетипично, но без подтверждения ручной модерации автоматически блокировать нельзя.",
+            summary="Ссылка выглядит нетипично, но без подтверждения модератора автоматически блокировать ее нельзя.",
         )
 
     if data_type == "phone":
@@ -103,7 +103,7 @@ def _fallback_classification(data_type: str, value: str, comment: str | None) ->
         return FraudClassification(
             category="Подозрительная почта",
             confidence=0.56,
-            summary="Адрес или комментарий выглядят сомнительно, но нужен модератор.",
+            summary="Адрес или комментарий выглядят сомнительно, но нужен ручной разбор модератора.",
         )
 
     if any(keyword in source_text for keyword in TEXT_SCAM_KEYWORDS):
@@ -131,7 +131,7 @@ def classify_report(data_type: str, value: str, comment: str | None) -> FraudCla
         return _fallback_classification(data_type, value, comment)
 
     prompt = f"""
-Ты аналитик антифрода. Твоя задача — предварительно классифицировать пользовательскую жалобу.
+Ты аналитик antifraud. Твоя задача: предварительно классифицировать пользовательскую жалобу.
 
 Тип данных: {data_type}
 Значение: {value}
@@ -189,7 +189,7 @@ def create_report(db: Session, user: User, data_type: str, value: str, user_comm
         user_comment=user_comment.strip() if user_comment else None,
         ai_category=existing_blacklist.category if existing_blacklist else None,
         ai_confidence=1.0 if existing_blacklist else None,
-        ai_summary="Совпадение с уже утвержденным blacklist." if existing_blacklist else None,
+        ai_summary=ALREADY_BLACKLISTED_SUMMARY if existing_blacklist else None,
     )
     db.add(item)
     db.commit()
@@ -200,7 +200,7 @@ def create_report(db: Session, user: User, data_type: str, value: str, user_comm
 def categorize_report_job(report_id: int) -> None:
     with SessionLocal() as db:
         item = db.query(ModerationQueue).filter(ModerationQueue.id == report_id).first()
-        if not item or item.ai_summary == "Совпадение с уже утвержденным blacklist.":
+        if not item or item.ai_summary == ALREADY_BLACKLISTED_SUMMARY:
             return
         classification = classify_report(item.data_type, item.value, item.user_comment)
         item.ai_category = classification.category
@@ -301,7 +301,10 @@ def check_blacklist(db: Session, data_type: str, value: str) -> BlacklistEntry |
     )
 
 
-def check_blacklist_batch(db: Session, items: list[BlacklistBatchCheckItem]) -> list[tuple[BlacklistBatchCheckItem, BlacklistEntry | None]]:
+def check_blacklist_batch(
+    db: Session,
+    items: list[BlacklistBatchCheckItem],
+) -> list[tuple[BlacklistBatchCheckItem, BlacklistEntry | None]]:
     results: list[tuple[BlacklistBatchCheckItem, BlacklistEntry | None]] = []
     for item in items:
         results.append((item, check_blacklist(db, item.data_type, item.value)))

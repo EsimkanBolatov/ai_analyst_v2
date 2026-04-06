@@ -1,3 +1,4 @@
+import re
 from dataclasses import dataclass
 from datetime import UTC, date, datetime
 from io import BytesIO
@@ -46,6 +47,7 @@ DESCRIPTION_COLUMN_CANDIDATES = [
     "описание",
     "назначение",
 ]
+ISO_LIKE_DATE_PATTERN = re.compile(r"^\d{4}[-/]\d{1,2}[-/]\d{1,2}")
 
 
 @dataclass
@@ -119,8 +121,10 @@ def _to_amount(value: object) -> float | None:
 def _to_datetime(value: object) -> datetime | None:
     if value is None or pd.isna(value):
         return None
+    raw = str(value).strip()
+    dayfirst = not bool(ISO_LIKE_DATE_PATTERN.match(raw))
     try:
-        parsed = pd.to_datetime(value, utc=True, dayfirst=True, errors="coerce")
+        parsed = pd.to_datetime(value, utc=True, dayfirst=dayfirst, errors="coerce")
     except Exception:
         return None
 

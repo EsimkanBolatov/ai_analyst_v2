@@ -110,16 +110,16 @@ def _build_fallback_reply(message: str, balance: float | None, limit: float | No
         if balance is not None and limit is not None and limit > 0:
             ratio = balance / limit
             if ratio < 0.2:
-                tone = "Остаток бюджета уже критический. Новую трату фиксирую, но дисциплина у вас слабая."
+                tone = "Остаток бюджета уже критически низкий. Трату фиксирую, но дальше нужны жесткие ограничения."
             elif ratio < 0.4:
-                tone = "Трата записана. Уже пора резать необязательные расходы."
+                tone = "Трата записана. Пора сокращать необязательные расходы."
             else:
-                tone = "Трату записал. Пока держитесь в рамках, но расслабляться рано."
+                tone = "Трату записал. Пока вы держитесь в рамках лимита, но расслабляться рано."
         else:
             tone = "Трату записал. Теперь задайте месячный лимит, иначе контроля бюджета не будет."
 
         return AssistantDecision(
-            reply=f"{tone} Сумма: {amount:.2f}. Категория: {_detect_category(message)}.",
+            reply=f"{tone} Сумма: {amount:.2f}. Категория: {category}.",
             should_record_transaction=True,
             transaction={
                 "amount": amount,
@@ -133,14 +133,17 @@ def _build_fallback_reply(message: str, balance: float | None, limit: float | No
         return AssistantDecision(
             reply=(
                 f"По текущему месяцу остаток {balance:.2f} из лимита {limit:.2f}. "
-                "Если хотите совет по экономии, формулируйте вопрос конкретно."
+                "Если нужен совет по экономии, задайте конкретный вопрос."
             ),
             should_record_transaction=False,
             transaction=None,
         )
 
     return AssistantDecision(
-        reply="Лимит бюджета еще не задан. Сначала установите месячный бюджет, затем фиксируйте траты или импортируйте выписку.",
+        reply=(
+            "Лимит бюджета еще не задан. Сначала установите месячный бюджет, "
+            "затем фиксируйте траты или импортируйте выписку."
+        ),
         should_record_transaction=False,
         transaction=None,
     )
@@ -161,7 +164,7 @@ def _run_groq_assistant(
         return _build_fallback_reply(user_message, current_budget_balance, current_budget_limit)
 
     prompt = f"""
-Ты строгий личный финансист. Отвечай по-русски, коротко, по делу, с жесткой финансовой дисциплиной, но без оскорблений.
+Ты строгий личный финансовый ассистент. Отвечай по-русски, коротко, по делу, с дисциплиной, но без оскорблений.
 
 ПРОФИЛЬ:
 - Пользователь: {user.email}
@@ -179,10 +182,10 @@ def _run_groq_assistant(
 {user_message}
 
 ЗАДАЧА:
-1. Ответь как строгий личный финансист.
+1. Ответь как строгий личный финансовый ассистент.
 2. Определи, описывает ли пользователь новую трату.
-3. Если да, извлеки одну транзакцию с amount, category, description, occurred_at (ISO 8601). Если дата не указана, поставь null.
-4. Если уверенности нет, should_record_transaction=false.
+3. Если да, извлеки одну транзакцию с amount, category, description, occurred_at в формате ISO 8601. Если дата не указана, поставь null.
+4. Если уверенности нет, верни should_record_transaction=false.
 
 ВЕРНИ СТРОГО JSON:
 {{
@@ -290,7 +293,7 @@ def handle_assistant_message(db: Session, user: User, message: str) -> dict[str,
                 source_filename=None,
             )
 
-    assistant_text = decision.reply or "Ответ сформировать не удалось. Повторите запрос точнее."
+    assistant_text = decision.reply or "Не удалось сформировать ответ. Повторите запрос точнее."
     assistant_entry = AssistantMessage(user_id=user.id, role="assistant", content=assistant_text)
     db.add(assistant_entry)
 
