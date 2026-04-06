@@ -12,6 +12,7 @@ logging.basicConfig(level=logging.INFO)
 logger = logging.getLogger(__name__)
 
 UPLOAD_DIR = "/app/uploads"
+SUPPORTED_EXTENSIONS = {".csv", ".xlsx", ".xls"}
 os.makedirs(UPLOAD_DIR, exist_ok=True)
 
 app = FastAPI(title="File Ingestion Service")
@@ -75,10 +76,33 @@ async def assemble_chunks(
 async def get_uploaded_files():
     try:
         files = [f for f in os.listdir(UPLOAD_DIR) if
-                 f.endswith('.csv') and os.path.isfile(os.path.join(UPLOAD_DIR, f))]
+                 os.path.splitext(f)[1].lower() in SUPPORTED_EXTENSIONS and os.path.isfile(os.path.join(UPLOAD_DIR, f))]
         return files
     except Exception as e:
         raise HTTPException(status_code=500, detail=f"Could not read upload directory: {e}")
+
+
+@app.post("/upload-direct/")
+async def upload_direct(file: UploadFile = File(...)):
+    filename = os.path.basename(file.filename or "")
+    extension = os.path.splitext(filename)[1].lower()
+    if not filename or extension not in SUPPORTED_EXTENSIONS:
+        raise HTTPException(status_code=400, detail="Only CSV and Excel files are supported.")
+
+    final_path = os.path.join(UPLOAD_DIR, filename)
+    if os.path.exists(final_path):
+        name, suffix = os.path.splitext(filename)
+        counter = 1
+        while os.path.exists(final_path):
+            final_path = os.path.join(UPLOAD_DIR, f"{name}_{counter}{suffix}")
+            counter += 1
+
+    try:
+        with open(final_path, "wb") as buffer:
+            shutil.copyfileobj(file.file, buffer)
+        return {"status": "success", "filename": os.path.basename(final_path)}
+    except Exception as e:
+        raise HTTPException(status_code=500, detail=str(e))
 
 
 @app.get("/download/{filename}")
@@ -86,7 +110,7 @@ async def download_file(filename: str):
     file_path = os.path.join(UPLOAD_DIR, filename)
     if not os.path.exists(file_path) or not os.path.isfile(file_path):
         raise HTTPException(status_code=404, detail="File not found")
-    return FileResponse(path=file_path, filename=filename, media_type="text/csv")
+    return FileResponse(path=file_path, filename=filename, media_type="application/octet-stream")
 
 
 # --- Эндпоинт получения колонок ---

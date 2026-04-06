@@ -21,6 +21,10 @@ class Settings(BaseSettings):
     postgres_port: int = 5432
     database_url: str | None = None
 
+    groq_api_key: str | None = None
+    groq_model: str = "llama-3.1-8b-instant"
+    file_service_url: str = "http://file_service:8000"
+
     jwt_secret_key: str = "change-me-in-production"
     jwt_refresh_secret_key: str = "change-me-refresh-in-production"
     jwt_algorithm: str = "HS256"
