@@ -1,4 +1,12 @@
-import type { AdminSummary, TokenPair, User } from "@/lib/types";
+import type {
+  AdminSummary,
+  AssistantChatResponse,
+  AssistantOverview,
+  Budget,
+  TokenPair,
+  TransactionImportResponse,
+  User,
+} from "@/lib/types";
 
 const API_BASE_URL =
   process.env.NEXT_PUBLIC_API_BASE_URL ?? "http://localhost:8010/api/v1";
@@ -12,13 +20,22 @@ export class ApiError extends Error {
   }
 }
 
+type SessionRequestContext = {
+  accessToken: string;
+  refreshToken: string;
+  onSession: (session: TokenPair) => void;
+};
+
 async function apiRequest<T>(
   path: string,
   options: RequestInit = {},
   accessToken?: string,
 ): Promise<T> {
   const headers = new Headers(options.headers);
-  headers.set("Content-Type", "application/json");
+  const isFormData = typeof FormData !== "undefined" && options.body instanceof FormData;
+  if (!isFormData && !headers.has("Content-Type")) {
+    headers.set("Content-Type", "application/json");
+  }
 
   if (accessToken) {
     headers.set("Authorization", `Bearer ${accessToken}`);
@@ -45,6 +62,24 @@ async function apiRequest<T>(
   }
 
   return (await response.json()) as T;
+}
+
+async function apiRequestWithSession<T>(
+  path: string,
+  session: SessionRequestContext,
+  options: RequestInit = {},
+): Promise<T> {
+  try {
+    return await apiRequest<T>(path, options, session.accessToken);
+  } catch (error) {
+    if (!(error instanceof ApiError) || error.status !== 401) {
+      throw error;
+    }
+
+    const refreshed = await refreshSession(session.refreshToken);
+    session.onSession(refreshed);
+    return apiRequest<T>(path, options, refreshed.access_token);
+  }
 }
 
 export async function registerUser(payload: {
@@ -80,4 +115,43 @@ export async function fetchCurrentUser(accessToken: string): Promise<User> {
 
 export async function fetchAdminSummary(accessToken: string): Promise<AdminSummary> {
   return apiRequest<AdminSummary>("/admin/summary", {}, accessToken);
+}
+
+export async function fetchAssistantOverview(
+  session: SessionRequestContext,
+): Promise<AssistantOverview> {
+  return apiRequestWithSession<AssistantOverview>("/assistant/overview", session);
+}
+
+export async function saveBudget(
+  session: SessionRequestContext,
+  payload: { monthly_limit: number; month?: string },
+): Promise<Budget> {
+  return apiRequestWithSession<Budget>("/assistant/budget", session, {
+    method: "PUT",
+    body: JSON.stringify(payload),
+  });
+}
+
+export async function sendAssistantMessage(
+  session: SessionRequestContext,
+  payload: { message: string },
+): Promise<AssistantChatResponse> {
+  return apiRequestWithSession<AssistantChatResponse>("/assistant/chat", session, {
+    method: "POST",
+    body: JSON.stringify(payload),
+  });
+}
+
+export async function importTransactions(
+  session: SessionRequestContext,
+  file: File,
+): Promise<TransactionImportResponse> {
+  const formData = new FormData();
+  formData.append("file", file);
+
+  return apiRequestWithSession<TransactionImportResponse>("/assistant/import-transactions", session, {
+    method: "POST",
+    body: formData,
+  });
 }
