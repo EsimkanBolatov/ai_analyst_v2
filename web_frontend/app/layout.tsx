@@ -1,20 +1,11 @@
 import type { Metadata, Viewport } from "next";
-import { IBM_Plex_Mono, Manrope } from "next/font/google";
+import "@fontsource-variable/manrope/wght.css";
+import "@fontsource/ibm-plex-mono/400.css";
+import "@fontsource/ibm-plex-mono/500.css";
 
 import "@/app/globals.css";
 import { Header } from "@/components/header";
 import { getSiteUrl } from "@/lib/site";
-
-const manrope = Manrope({
-  subsets: ["latin", "cyrillic"],
-  variable: "--font-manrope",
-});
-
-const mono = IBM_Plex_Mono({
-  subsets: ["latin", "cyrillic"],
-  weight: ["400", "500"],
-  variable: "--font-mono",
-});
 
 const siteUrl = getSiteUrl();
 
@@ -84,9 +75,7 @@ export default function RootLayout({
 }>) {
   return (
     <html lang="ru">
-      <body
-        className={`${manrope.variable} ${mono.variable} font-[family-name:var(--font-manrope)]`}
-      >
+      <body className="font-[family-name:var(--font-manrope)]">
         <Header />
         <main className="pb-16">{children}</main>
       </body>

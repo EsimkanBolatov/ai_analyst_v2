@@ -4,6 +4,8 @@
 
 :root {
   color-scheme: light;
+  --font-manrope: "Manrope Variable", "Manrope", "Segoe UI", sans-serif;
+  --font-mono: "IBM Plex Mono", "SFMono-Regular", Consolas, "Liberation Mono", monospace;
 }
 
 html {
