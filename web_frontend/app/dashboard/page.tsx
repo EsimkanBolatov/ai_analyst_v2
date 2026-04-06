@@ -4,6 +4,7 @@ import { useEffect, useState } from "react";
 import { useRouter } from "next/navigation";
 
 import { AssistantWorkspace } from "@/components/assistant-workspace";
+import { FraudReportCenter } from "@/components/fraud-report-center";
 import { LogoutButton } from "@/components/logout-button";
 import { SessionGuard } from "@/components/session-guard";
 import {
@@ -121,27 +122,46 @@ export default function DashboardPage() {
 
         <div className="mt-8">
           {isLoading || !currentUser || !accessToken || !refreshToken ? (
-            <div className="grid gap-4 md:grid-cols-3">
-              {[1, 2, 3].map((item) => (
-                <div key={item} className="h-40 animate-pulse rounded-3xl border border-line bg-white/40" />
-              ))}
+            <div className="space-y-4">
+              <div className="grid gap-4 md:grid-cols-3">
+                {[1, 2, 3].map((item) => (
+                  <div key={item} className="h-40 animate-pulse rounded-3xl border border-line bg-white/40" />
+                ))}
+              </div>
+              <div className="h-64 animate-pulse rounded-3xl border border-line bg-white/40" />
             </div>
           ) : (
-            <AssistantWorkspace
-              user={currentUser}
-              adminSummary={summary}
-              accessToken={accessToken}
-              refreshToken={refreshToken}
-              onSession={(session) => {
-                setSession(session);
-                setUser(session.user);
-                setCurrentUser(session.user);
-              }}
-              onAuthFailure={() => {
-                clearSession();
-                router.replace("/login");
-              }}
-            />
+            <div className="space-y-8">
+              <AssistantWorkspace
+                user={currentUser}
+                adminSummary={summary}
+                accessToken={accessToken}
+                refreshToken={refreshToken}
+                onSession={(session) => {
+                  setSession(session);
+                  setUser(session.user);
+                  setCurrentUser(session.user);
+                }}
+                onAuthFailure={() => {
+                  clearSession();
+                  router.replace("/login");
+                }}
+              />
+              <FraudReportCenter
+                user={currentUser}
+                accessToken={accessToken}
+                refreshToken={refreshToken}
+                onSession={(session) => {
+                  setSession(session);
+                  setUser(session.user);
+                  setCurrentUser(session.user);
+                }}
+                onAuthFailure={() => {
+                  clearSession();
+                  router.replace("/login");
+                }}
+              />
+            </div>
           )}
         </div>
       </div>
