@@ -38,3 +38,8 @@ class User(Base):
         back_populates="resolver",
         foreign_keys="ModerationQueue.resolved_by_user_id",
     )
+    assistant_messages = relationship(
+        "AssistantMessage",
+        back_populates="user",
+        cascade="all, delete-orphan",
+    )

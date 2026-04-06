@@ -1,6 +1,6 @@
 from datetime import date, datetime
 
-from sqlalchemy import Date, DateTime, ForeignKey, Numeric, func
+from sqlalchemy import Date, DateTime, ForeignKey, Numeric, UniqueConstraint, func
 from sqlalchemy.orm import Mapped, mapped_column, relationship
 
 from app.models.base import Base
@@ -8,6 +8,7 @@ from app.models.base import Base
 
 class UserBudget(Base):
     __tablename__ = "budgets"
+    __table_args__ = (UniqueConstraint("user_id", "month", name="uq_budgets_user_month"),)
 
     id: Mapped[int] = mapped_column(primary_key=True, index=True)
     user_id: Mapped[int] = mapped_column(ForeignKey("users.id"), nullable=False, index=True)
