@@ -10,7 +10,20 @@
 
 Полноценный `docker compose up` интеграционный прогон в этой среде не был выполнен из-за отсутствия запущенного Docker daemon, но compose-конфиг был успешно провален через `docker compose config`.
 
-## 2. Выполненные команды
+## 2. Тестовые аккаунты
+
+Для локального стенда при `SEED_TEST_DATA=true` создаются:
+
+```text
+user@ai-analyst.app       / Test12345!  / User
+moderator@ai-analyst.app  / Test12345!  / Moderator
+risk@ai-analyst.app       / Test12345!  / RiskManager
+admin@ai-analyst.app      / Test12345!  / Admin
+```
+
+Seed также добавляет бюджет, транзакции, историю AI-ассистента, несколько жалоб и одну подтвержденную blacklist-запись.
+
+## 3. Выполненные команды
 
 ### Backend
 
@@ -42,7 +55,7 @@ docker compose --env-file .env.example config
 docker info
 ```
 
-## 3. Прикладной backend smoke-test
+## 4. Прикладной backend smoke-test
 
 Smoke-test прогонялся через временную SQLite-базу и `FastAPI TestClient`, чтобы проверить бизнес-критичные маршруты без Docker.
 
@@ -66,7 +79,7 @@ Smoke-test прогонялся через временную SQLite-базу и
 16. `GET /api/v1/admin/summary`
 17. role-based access check для `GET /api/v1/admin/users`
 
-## 4. Результат smoke-test
+## 5. Результат smoke-test
 
 Результат: `SMOKE_TEST_OK`
 
@@ -80,7 +93,7 @@ Smoke-test прогонялся через временную SQLite-базу и
 - moderation approval переносит запись в blacklist
 - role-based access работает корректно
 
-## 5. Найденные дефекты и исправления
+## 6. Найденные дефекты и исправления
 
 ### Дефект 1. `ALLOWED_ORIGINS` ломал запуск через env
 
@@ -138,7 +151,7 @@ Smoke-test прогонялся через временную SQLite-базу и
 
 - добавлена эвристика: для ISO-like дат `dayfirst=False`, для остальных форматов сохраняется day-first parsing
 
-## 6. Наблюдения, не блокирующие релиз
+## 7. Наблюдения, не блокирующие релиз
 
 ### `next build` warning по SWC
 
@@ -148,7 +161,7 @@ Smoke-test прогонялся через временную SQLite-базу и
 
 Во время `TestClient` smoke-test file service намеренно не поднимался, поэтому `assistant/import-transactions` возвращал warning о недоступности file service. Это корректное поведение деградации, а не ошибка бизнес-логики.
 
-## 7. Что еще желательно проверить вручную
+## 8. Что еще желательно проверить вручную
 
 - e2e вход через реальный браузер
 - загрузку реальной банковской выписки `.xlsx`
