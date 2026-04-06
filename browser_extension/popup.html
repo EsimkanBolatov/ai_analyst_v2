@@ -1,0 +1,53 @@
+<!doctype html>
+<html lang="ru">
+  <head>
+    <meta charset="utf-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1">
+    <title>AI-Analyst Guard</title>
+    <link rel="stylesheet" href="popup.css">
+  </head>
+  <body>
+    <main class="popup">
+      <section class="panel hero">
+        <p class="eyebrow">AI-Analyst Guard</p>
+        <h1>Проверка скама прямо в браузере</h1>
+        <p class="lead">Ручная проверка по клику и непрерывный мониторинг ссылок и телефонов.</p>
+      </section>
+
+      <section class="panel">
+        <div class="row">
+          <div>
+            <p class="label">Continuous Protection</p>
+            <p class="hint">Сканирует DOM активной страницы и подсвечивает blacklist-совпадения.</p>
+          </div>
+          <label class="switch">
+            <input id="continuous-toggle" type="checkbox">
+            <span class="slider"></span>
+          </label>
+        </div>
+        <button id="rescan-button" class="secondary block">Пересканировать вкладку</button>
+      </section>
+
+      <section class="panel">
+        <label class="label" for="api-base-url">Backend API URL</label>
+        <input id="api-base-url" class="field" type="text" placeholder="http://localhost:8010/api/v1">
+        <button id="save-settings-button" class="secondary block">Сохранить настройки</button>
+        <p id="settings-status" class="hint status"></p>
+      </section>
+
+      <section class="panel">
+        <label class="label" for="manual-value">Ручная проверка</label>
+        <textarea id="manual-value" class="field textarea" placeholder="Вставьте ссылку, номер, email или текст"></textarea>
+        <button id="check-button" class="primary block">Проверить</button>
+      </section>
+
+      <section id="result-panel" class="panel result hidden">
+        <p class="label">Result</p>
+        <p id="result-title" class="result-title"></p>
+        <p id="result-body" class="hint"></p>
+      </section>
+    </main>
+
+    <script src="popup.js"></script>
+  </body>
+  </html>

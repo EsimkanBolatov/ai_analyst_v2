@@ -1,0 +1,32 @@
+{
+  "manifest_version": 3,
+  "name": "AI-Analyst Guard",
+  "version": "0.1.0",
+  "description": "Проверка ссылок, телефонов и выделенного текста на признаки мошенничества через AI-Analyst.",
+  "permissions": [
+    "storage",
+    "activeTab",
+    "scripting",
+    "tabs",
+    "contextMenus"
+  ],
+  "host_permissions": [
+    "<all_urls>",
+    "http://localhost:8010/*",
+    "http://127.0.0.1:8010/*"
+  ],
+  "background": {
+    "service_worker": "background.js"
+  },
+  "action": {
+    "default_title": "AI-Analyst Guard",
+    "default_popup": "popup.html"
+  },
+  "content_scripts": [
+    {
+      "matches": ["<all_urls>"],
+      "js": ["content.js"],
+      "run_at": "document_idle"
+    }
+  ]
+}
