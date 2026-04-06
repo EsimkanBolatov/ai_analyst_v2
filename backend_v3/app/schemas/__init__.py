@@ -11,6 +11,10 @@ from app.schemas.assistant import (
 from app.schemas.auth import LoginRequest, RefreshRequest, RegisterRequest, TokenPair
 from app.schemas.common import AdminSummary
 from app.schemas.fraud import (
+    BlacklistBatchCheckItem,
+    BlacklistBatchCheckRequest,
+    BlacklistBatchCheckResponse,
+    BlacklistBatchCheckResult,
     BlacklistCheckRequest,
     BlacklistCheckResponse,
     BlacklistEntryRead,
@@ -30,6 +34,10 @@ __all__ = [
     "AssistantChatResponse",
     "AssistantMessageRead",
     "AssistantOverview",
+    "BlacklistBatchCheckItem",
+    "BlacklistBatchCheckRequest",
+    "BlacklistBatchCheckResponse",
+    "BlacklistBatchCheckResult",
     "BlacklistCheckRequest",
     "BlacklistCheckResponse",
     "BlacklistEntryRead",

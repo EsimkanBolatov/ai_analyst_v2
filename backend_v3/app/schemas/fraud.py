@@ -87,3 +87,23 @@ class BlacklistCheckRequest(BaseModel):
 class BlacklistCheckResponse(BaseModel):
     is_blacklisted: bool
     matched_entry: BlacklistEntryRead | None = None
+
+
+class BlacklistBatchCheckItem(BaseModel):
+    data_type: FraudDataType
+    value: str = Field(min_length=1, max_length=512)
+
+
+class BlacklistBatchCheckRequest(BaseModel):
+    items: list[BlacklistBatchCheckItem] = Field(default_factory=list, max_length=500)
+
+
+class BlacklistBatchCheckResult(BaseModel):
+    data_type: FraudDataType
+    value: str
+    is_blacklisted: bool
+    matched_entry: BlacklistEntryRead | None = None
+
+
+class BlacklistBatchCheckResponse(BaseModel):
+    results: list[BlacklistBatchCheckResult]

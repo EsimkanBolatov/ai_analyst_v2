@@ -13,7 +13,7 @@ from app.core.database import SessionLocal
 from app.models.blacklist_entry import BlacklistEntry
 from app.models.moderation_queue import ModerationQueue, ModerationStatus
 from app.models.user import User
-from app.schemas.fraud import ModerationAction, ModerationFilterStatus
+from app.schemas.fraud import BlacklistBatchCheckItem, ModerationAction, ModerationFilterStatus
 
 
 @dataclass
@@ -299,3 +299,10 @@ def check_blacklist(db: Session, data_type: str, value: str) -> BlacklistEntry |
         .filter(BlacklistEntry.data_type == data_type, BlacklistEntry.value == normalized_value)
         .first()
     )
+
+
+def check_blacklist_batch(db: Session, items: list[BlacklistBatchCheckItem]) -> list[tuple[BlacklistBatchCheckItem, BlacklistEntry | None]]:
+    results: list[tuple[BlacklistBatchCheckItem, BlacklistEntry | None]] = []
+    for item in items:
+        results.append((item, check_blacklist(db, item.data_type, item.value)))
+    return results

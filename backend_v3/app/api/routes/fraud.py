@@ -5,6 +5,9 @@ from app.api.deps import get_current_user, require_roles
 from app.core.database import get_db
 from app.models.user import User
 from app.schemas.fraud import (
+    BlacklistBatchCheckRequest,
+    BlacklistBatchCheckResponse,
+    BlacklistBatchCheckResult,
     BlacklistCheckRequest,
     BlacklistCheckResponse,
     BlacklistEntryRead,
@@ -18,6 +21,7 @@ from app.schemas.fraud import (
 )
 from app.services.fraud_service import (
     categorize_report_job,
+    check_blacklist_batch,
     check_blacklist,
     create_report,
     list_moderation_queue,
@@ -70,6 +74,25 @@ def check_fraud_value(
     return BlacklistCheckResponse(
         is_blacklisted=matched is not None,
         matched_entry=BlacklistEntryRead.model_validate(matched) if matched else None,
+    )
+
+
+@router.post("/check-batch", response_model=BlacklistBatchCheckResponse)
+def check_fraud_values_batch(
+    payload: BlacklistBatchCheckRequest,
+    db: Session = Depends(get_db),
+) -> BlacklistBatchCheckResponse:
+    results = check_blacklist_batch(db, payload.items)
+    return BlacklistBatchCheckResponse(
+        results=[
+            BlacklistBatchCheckResult(
+                data_type=item.data_type,
+                value=item.value,
+                is_blacklisted=matched is not None,
+                matched_entry=BlacklistEntryRead.model_validate(matched) if matched else None,
+            )
+            for item, matched in results
+        ]
     )
 
 
