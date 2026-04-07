@@ -23,6 +23,10 @@ const sprintItems = [
     title: "Этап 5",
     text: "SEO, loading states, responsive polish и production deployment контур.",
   },
+  {
+    title: "ML Lab",
+    text: "Перенос Streamlit-страниц в новый Next.js UI: profiling, AI report, training, prediction и fraud-check.",
+  },
 ];
 
 export const metadata: Metadata = {
@@ -34,7 +38,7 @@ export default function HomePage() {
   return (
     <div className="shell pt-8 sm:pt-10">
       <LandingHero />
-      <section className="mt-8 grid gap-4 md:grid-cols-2 xl:grid-cols-5">
+      <section className="mt-8 grid gap-4 md:grid-cols-2 xl:grid-cols-3">
         {sprintItems.map((item) => (
           <article key={item.title} className="panel p-6">
             <p className="font-[family-name:var(--font-mono)] text-xs uppercase tracking-[0.3em] text-smoke">
