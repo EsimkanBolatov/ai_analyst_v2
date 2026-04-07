@@ -25,6 +25,11 @@ class Settings(BaseSettings):
     groq_api_key: str | None = None
     groq_model: str = "llama-3.1-8b-instant"
     file_service_url: str = "http://file_service:8000"
+    groq_service_url: str = "http://groq_service:8000"
+    profiling_service_url: str = "http://profiling_service:8000"
+    training_service_url: str = "http://training_service:8000"
+    prediction_service_url: str = "http://prediction_service:8000"
+    fraud_check_service_url: str = "http://fraud_check_service:8000"
     seed_test_data: bool = False
 
     jwt_secret_key: str = "change-me-in-production"
