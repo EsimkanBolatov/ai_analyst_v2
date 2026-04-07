@@ -20,8 +20,8 @@ export function LandingHero() {
             AI-Analyst Platform вышел в release-контур для контроля бюджета и борьбы с финансовым мошенничеством.
           </h1>
           <p className="mt-5 max-w-2xl text-sm leading-7 text-smoke sm:text-base">
-            В продукт уже входят FastAPI backend, Next.js App Router, AI-бухгалтер, moderation workflow
-            и Chromium extension для браузерной защиты.
+            В продукт уже входят FastAPI backend, Next.js App Router, AI-бухгалтер, moderation workflow,
+            ML Lab с перенесенной Streamlit-логикой и Chromium extension для браузерной защиты.
           </p>
           <div className="mt-8 flex flex-col gap-3 sm:flex-row">
             <Link href="/register" className="button-primary">
@@ -38,6 +38,7 @@ export function LandingHero() {
             "JWT access + refresh",
             "Role-based endpoints",
             "AI accountant + moderation",
+            "ML Lab from Streamlit pages",
             "Browser guard + deploy ready",
           ].map((item) => (
             <div key={item} className="rounded-[24px] border border-line bg-white/70 px-5 py-4 text-sm text-ink">
