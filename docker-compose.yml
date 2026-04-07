@@ -17,6 +17,11 @@ services:
       - JWT_REFRESH_SECRET_KEY=${JWT_REFRESH_SECRET_KEY}
       - GROQ_API_KEY=${GROQ_API_KEY}
       - FILE_SERVICE_URL=http://file_service:8000
+      - GROQ_SERVICE_URL=http://groq_service:8000
+      - PROFILING_SERVICE_URL=http://profiling_service:8000
+      - TRAINING_SERVICE_URL=http://training_service:8000
+      - PREDICTION_SERVICE_URL=http://prediction_service:8000
+      - FRAUD_CHECK_SERVICE_URL=http://fraud_check_service:8000
       - ALLOWED_ORIGINS=${ALLOWED_ORIGINS}
       - SEED_TEST_DATA=${SEED_TEST_DATA:-true}
 
