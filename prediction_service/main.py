@@ -17,6 +17,25 @@ MODELS_DIR = "/app/models"
 UPLOAD_DIR = "/app/uploads"
 os.makedirs(UPLOAD_DIR, exist_ok=True)
 FILE_SERVICE_URL = os.getenv("FILE_SERVICE_URL", "http://file_service:8000")
+CSV_ENCODINGS = ("utf-8", "utf-8-sig", "cp1251", "windows-1251")
+
+
+def read_dataset(file_path: str, **kwargs) -> pd.DataFrame:
+    extension = os.path.splitext(file_path)[1].lower()
+    if extension in {".xlsx", ".xls"}:
+        return pd.read_excel(file_path, **kwargs)
+
+    last_error: Exception | None = None
+    for encoding in CSV_ENCODINGS:
+        try:
+            return pd.read_csv(file_path, encoding=encoding, **kwargs)
+        except UnicodeDecodeError as exc:
+            last_error = exc
+
+    try:
+        return pd.read_csv(file_path, encoding="latin1", **kwargs)
+    except Exception as exc:
+        raise last_error or exc
 
 # --- Хранилище моделей ---
 # Render services do not share a local filesystem.
@@ -253,7 +272,7 @@ async def score_file(request: ScoreFileRequest):
         raise HTTPException(status_code=400, detail=f"Модель '{request.model_name}' не является моделью обнаружения аномалий.")
 
     try:
-        df = pd.read_csv(file_path)
+        df = read_dataset(file_path)
 
         # 2. Обрабатываем даты
         date_features = config.get('date_features', [])

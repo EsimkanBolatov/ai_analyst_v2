@@ -73,6 +73,25 @@ class ChatResponse(BaseModel):
 # --- Путь к файлам ---
 UPLOAD_DIR = "/app/uploads"
 os.makedirs(UPLOAD_DIR, exist_ok=True)
+CSV_ENCODINGS = ("utf-8", "utf-8-sig", "cp1251", "windows-1251")
+
+
+def read_dataset(file_path: str, **kwargs) -> pd.DataFrame:
+    extension = os.path.splitext(file_path)[1].lower()
+    if extension in {".xlsx", ".xls"}:
+        return pd.read_excel(file_path, **kwargs)
+
+    last_error: Exception | None = None
+    for encoding in CSV_ENCODINGS:
+        try:
+            return pd.read_csv(file_path, encoding=encoding, **kwargs)
+        except UnicodeDecodeError as exc:
+            last_error = exc
+
+    try:
+        return pd.read_csv(file_path, encoding="latin1", **kwargs)
+    except Exception as exc:
+        raise last_error or exc
 
 
 # --- Вспомогательные функции ---
@@ -123,7 +142,7 @@ async def analyze_dataset(request: AnalyzeRequest):
 
     try:
         # Читаем больше строк, чтобы у Groq было больше контекста
-        df = pd.read_csv(file_path, nrows=100)
+        df = read_dataset(file_path, nrows=100)
 
         # Попытаемся извлечь час, если есть timestamp
         ts_col = next((col for col in df.columns if 'timestamp' in col.lower()), None)
@@ -196,7 +215,7 @@ async def analyze_dataset(request: AnalyzeRequest):
         anomalies_list = response_content.get("anomalies", [])
         if anomalies_list:
             try:
-                full_df = pd.read_csv(file_path)
+                full_df = read_dataset(file_path)
                 for anomaly in anomalies_list:
                     idx = anomaly.get("row_index")
                     if idx is not None and 0 <= idx < len(full_df):
@@ -235,7 +254,7 @@ async def chat_with_analyst(request: ChatRequest):
     file_path = _ensure_uploaded_file(request.filename)
     
     try:
-        df_head = pd.read_csv(file_path, nrows=20)
+        df_head = read_dataset(file_path, nrows=20)
         df_head_str = df_head.to_string()
         messages_for_api = [
             {"role": "system", "content": get_chat_context_prompt(df_head_str)},

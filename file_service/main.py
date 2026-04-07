@@ -13,6 +13,7 @@ logger = logging.getLogger(__name__)
 
 UPLOAD_DIR = "/app/uploads"
 SUPPORTED_EXTENSIONS = {".csv", ".xlsx", ".xls"}
+CSV_ENCODINGS = ("utf-8", "utf-8-sig", "cp1251", "windows-1251")
 os.makedirs(UPLOAD_DIR, exist_ok=True)
 
 app = FastAPI(title="File Ingestion Service")
@@ -24,6 +25,24 @@ app.add_middleware(
     allow_methods=["*"],
     allow_headers=["*"],
 )
+
+
+def read_uploaded_table(file_path: str, **kwargs) -> pd.DataFrame:
+    extension = os.path.splitext(file_path)[1].lower()
+    if extension in {".xlsx", ".xls"}:
+        return pd.read_excel(file_path, **kwargs)
+
+    last_error: Exception | None = None
+    for encoding in CSV_ENCODINGS:
+        try:
+            return pd.read_csv(file_path, encoding=encoding, **kwargs)
+        except UnicodeDecodeError as exc:
+            last_error = exc
+
+    try:
+        return pd.read_csv(file_path, encoding="latin1", **kwargs)
+    except Exception as exc:
+        raise last_error or exc
 
 @app.post("/upload/")
 async def upload_chunk(
@@ -129,7 +148,7 @@ async def get_file_columns(filename: str):
 
     try:
         # Читаем первую строку, явно указывая, что это header
-        df_cols = pd.read_csv(file_path, nrows=0, header=0)
+        df_cols = read_uploaded_table(file_path, nrows=0, header=0)
 
         column_list = df_cols.columns.tolist()
 
@@ -138,7 +157,7 @@ async def get_file_columns(filename: str):
         # Проверка на странный баг
         if column_list == ["columns"]:
             logger.warning("Pandas вернул ['columns']. Похоже, файл не имеет шапки.")
-            df_cols_no_header = pd.read_csv(file_path, nrows=0, header=None)
+            df_cols_no_header = read_uploaded_table(file_path, nrows=0, header=None)
             column_list_no_header = [str(c) for c in df_cols_no_header.columns.tolist()]
             logger.info(f"Попытка 2 (без шапки): {column_list_no_header}")
             return column_list_no_header

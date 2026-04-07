@@ -14,6 +14,25 @@ REPORTS_DIR = "/app/reports"
 os.makedirs(UPLOAD_DIR, exist_ok=True)
 os.makedirs(REPORTS_DIR, exist_ok=True)
 FILE_SERVICE_URL = os.getenv("FILE_SERVICE_URL", "http://file_service:8000")
+CSV_ENCODINGS = ("utf-8", "utf-8-sig", "cp1251", "windows-1251")
+
+
+def read_dataset(file_path: str, **kwargs) -> pd.DataFrame:
+    extension = os.path.splitext(file_path)[1].lower()
+    if extension in {".xlsx", ".xls"}:
+        return pd.read_excel(file_path, **kwargs)
+
+    last_error: Exception | None = None
+    for encoding in CSV_ENCODINGS:
+        try:
+            return pd.read_csv(file_path, encoding=encoding, **kwargs)
+        except UnicodeDecodeError as exc:
+            last_error = exc
+
+    try:
+        return pd.read_csv(file_path, encoding="latin1", **kwargs)
+    except Exception as exc:
+        raise last_error or exc
 
 
 class ProfileRequest(BaseModel):
@@ -48,7 +67,7 @@ async def create_profile(request: ProfileRequest):
     report_path = os.path.join(REPORTS_DIR, report_filename)
 
     try:
-        df = pd.read_csv(file_path)
+        df = read_dataset(file_path)
         profile = ProfileReport(df, title=f"Анализ данных: {request.filename}")
         profile.to_file(report_path)
 
