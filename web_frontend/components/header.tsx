@@ -12,6 +12,7 @@ export function Header() {
   const links = [
     { href: "/", label: "Главная" },
     { href: "/dashboard", label: "Dashboard" },
+    ...(user ? [{ href: "/ml-lab", label: "ML Lab" }] : []),
     ...(user && ["Moderator", "Admin", "RiskManager"].includes(user.role.name)
       ? [{ href: "/moderation", label: "Moderation" }]
       : []),
@@ -25,20 +26,21 @@ export function Header() {
             AI-Analyst
           </Link>
           <nav className="flex items-center gap-2">
-            {links.map((link) => (
-              <Link
-                key={link.href}
-                href={link.href}
-                className={clsx(
-                  "rounded-full px-3 py-2 text-sm transition",
-                  pathname === link.href
-                    ? "bg-ink text-paper"
-                    : "text-smoke hover:bg-black/5 hover:text-ink",
-                )}
-              >
-                {link.label}
-              </Link>
-            ))}
+            {links.map((link) => {
+              const isActive = pathname === link.href || (link.href !== "/" && pathname.startsWith(`${link.href}/`));
+              return (
+                <Link
+                  key={link.href}
+                  href={link.href}
+                  className={clsx(
+                    "rounded-full px-3 py-2 text-sm transition",
+                    isActive ? "bg-ink text-paper" : "text-smoke hover:bg-black/5 hover:text-ink",
+                  )}
+                >
+                  {link.label}
+                </Link>
+              );
+            })}
           </nav>
         </div>
 
