@@ -13,6 +13,8 @@
 
 Legacy-сервисы можно поднимать только при необходимости.
 
+Для нового раздела `ML Lab` legacy-сервисы уже являются runtime-зависимостью конкретных страниц. Если нужен только бюджет, assistant, moderation и browser extension, достаточно основного набора. Если нужны перенесенные Streamlit-сценарии, нужно поднять также `groq_service`, `profiling_service`, `training_service`, `prediction_service`, `fraud_check_service`.
+
 ## 2. Обязательные зависимости
 
 - Docker Desktop или Docker Engine
@@ -34,6 +36,11 @@ Legacy-сервисы можно поднимать только при необ
 - `JWT_SECRET_KEY`
 - `JWT_REFRESH_SECRET_KEY`
 - `FILE_SERVICE_URL`
+- `GROQ_SERVICE_URL`
+- `PROFILING_SERVICE_URL`
+- `TRAINING_SERVICE_URL`
+- `PREDICTION_SERVICE_URL`
+- `FRAUD_CHECK_SERVICE_URL`
 - `NEXT_PUBLIC_API_BASE_URL`
 - `NEXT_PUBLIC_SITE_URL`
 - `ALLOWED_ORIGINS`
@@ -73,6 +80,18 @@ docker info
 docker compose up --build backend_api web_frontend file_service db
 ```
 
+Для запуска нового UI вместе с `ML Lab`:
+
+```powershell
+docker compose up --build backend_api web_frontend file_service db groq_service profiling_service training_service prediction_service fraud_check_service
+```
+
+Для запуска всего стека, включая старый Streamlit:
+
+```powershell
+docker compose up --build
+```
+
 ### Шаг 4. Проверка доступности
 
 ```powershell
@@ -95,6 +114,11 @@ $env:DATABASE_URL="postgresql+psycopg2://postgres:password@localhost:5433/ai_ana
 $env:JWT_SECRET_KEY="dev-access-secret"
 $env:JWT_REFRESH_SECRET_KEY="dev-refresh-secret"
 $env:FILE_SERVICE_URL="http://localhost:8000"
+$env:GROQ_SERVICE_URL="http://localhost:8008"
+$env:PROFILING_SERVICE_URL="http://localhost:8004"
+$env:TRAINING_SERVICE_URL="http://localhost:8001"
+$env:PREDICTION_SERVICE_URL="http://localhost:8003"
+$env:FRAUD_CHECK_SERVICE_URL="http://localhost:8005"
 $env:ALLOWED_ORIGINS="http://localhost:3000,http://127.0.0.1:3000"
 ..\venv\Scripts\python -m uvicorn app.main:app --host 0.0.0.0 --port 8010 --reload
 ```

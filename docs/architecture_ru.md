@@ -37,6 +37,12 @@ AI-Analyst Platform предназначена для двух основных 
 
 Они не являются основной точкой развития нового продукта, но остаются в репозитории как исторический и экспериментальный контур.
 
+После переноса Streamlit-логики часть legacy-сервисов снова участвует в новом пользовательском интерфейсе через раздел `ML Lab`. Важно различать:
+
+- `frontend` — старый Streamlit UI, сохранен как отдельный интерфейс.
+- `groq_service`, `profiling_service`, `training_service`, `prediction_service`, `fraud_check_service` — старые микросервисы, к которым новый `backend_v3` обращается через `/api/v1/legacy/*`.
+- `web_frontend/app/ml-lab` — новый Next.js UI для сценариев, которые раньше были доступны только в Streamlit.
+
 ## 3. Архитектурные принципы
 
 - API-first: вся бизнес-логика вынесена в backend.
@@ -70,6 +76,8 @@ AI-Analyst Platform предназначена для двух основных 
   Жалобы пользователей, AI/fallback классификация, очередь модерации, финальный blacklist.
 - `admin`
   Сводная аналитика и список пользователей.
+- `legacy`
+  Authenticated bridge к старым ML/AI/fraud микросервисам для раздела `ML Lab`: файлы, profile-отчеты, AI report, обучение моделей, prediction и legacy fraud-check.
 
 ## 5. Модель данных
 
@@ -128,6 +136,14 @@ AI-Analyst Platform предназначена для двух основных 
 1. Content script собирает ссылки и телефоны со страницы
 2. Background/popup отправляет batch-check в backend
 3. Совпадения подсвечиваются в UI страницы и popup
+
+### 6.5 ML Lab и перенесенная Streamlit-логика
+
+1. Пользователь открывает защищенный раздел `/ml-lab`
+2. Next.js вызывает `/api/v1/legacy/*` с JWT access token
+3. `backend_v3` проксирует запрос в нужный legacy-сервис
+4. Legacy-сервис выполняет старую бизнес-логику: profiling, Groq-анализ, обучение, prediction или risk scoring
+5. Результат возвращается в новый UI без запуска Streamlit-страницы
 
 ## 7. Безопасность
 

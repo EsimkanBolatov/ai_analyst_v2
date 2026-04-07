@@ -40,6 +40,17 @@ cd web_frontend
 npm run build
 ```
 
+Текущий прогон после добавления `ML Lab` подтвердил, что Next.js строит новые маршруты:
+
+```text
+/ml-lab
+/ml-lab/profile
+/ml-lab/ai-report
+/ml-lab/train
+/ml-lab/prediction
+/ml-lab/fraud-check
+```
+
 ### Browser extension
 
 ```powershell
@@ -52,6 +63,8 @@ node --check browser_extension\popup.js
 
 ```powershell
 docker compose --env-file .env.example config
+docker compose build backend_api
+docker compose build web_frontend
 docker info
 ```
 
@@ -78,6 +91,8 @@ Smoke-test прогонялся через временную SQLite-базу и
 15. `POST /api/v1/fraud/check-batch`
 16. `GET /api/v1/admin/summary`
 17. role-based access check для `GET /api/v1/admin/users`
+
+После добавления legacy bridge дополнительно проверен импорт FastAPI приложения и наличие маршрутов `/api/v1/legacy/*`. Полный функциональный прогон этих маршрутов требует поднятых legacy-сервисов: `groq_service`, `profiling_service`, `training_service`, `prediction_service`, `fraud_check_service`.
 
 ## 5. Результат smoke-test
 
@@ -169,3 +184,4 @@ Smoke-test прогонялся через временную SQLite-базу и
 - работу browser extension на нескольких тестовых доменах
 - сценарии с реальным Groq API key
 - сценарии с PostgreSQL внутри поднятого Docker-контура
+- сценарии ML Lab: загрузка датасета, profile-отчет, AI report, обучение модели, score file, ручной predict и legacy fraud-check

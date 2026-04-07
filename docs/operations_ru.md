@@ -9,7 +9,9 @@
 - `file_service`
 - `PostgreSQL`
 
-Legacy-сервисы не должны считаться обязательной частью эксплуатационного контура без отдельного решения команды.
+Legacy-сервисы не должны считаться обязательной частью базового эксплуатационного контура без отдельного решения команды.
+
+Исключение: если в production включается раздел `ML Lab`, то для него нужны `groq_service`, `profiling_service`, `training_service`, `prediction_service` и `fraud_check_service`. В таком режиме они становятся зависимостями конкретной функциональной зоны, а не всего продукта.
 
 ## 2. Health и доступность
 
@@ -27,6 +29,8 @@ GET /api/v1/health/
 - ошибки аутентификации и refresh
 - backlog очереди модерации
 - скорость ответов assistant и fraud endpoints
+- ошибки `/api/v1/legacy/*`, если используется `ML Lab`
+- доступность legacy-сервисов, если включены перенесенные Streamlit-сценарии
 
 ## 3. Логи
 
@@ -116,6 +120,13 @@ GET /api/v1/health/
 1. Проверить API URL в popup settings
 2. Проверить доступность `POST /api/v1/fraud/check-batch`
 3. Проверить, не выключен ли `Continuous Protection`
+
+### ML Lab возвращает ошибку legacy service unavailable
+
+1. Проверить, что поднят соответствующий сервис: `groq_service`, `profiling_service`, `training_service`, `prediction_service` или `fraud_check_service`
+2. Проверить env-переменные backend: `GROQ_SERVICE_URL`, `PROFILING_SERVICE_URL`, `TRAINING_SERVICE_URL`, `PREDICTION_SERVICE_URL`, `FRAUD_CHECK_SERVICE_URL`
+3. Проверить, что сервис находится в той же Docker network, что и `backend_api`
+4. Для AI Report проверить, задан ли `GROQ_API_KEY`
 
 ## 8. Рекомендации по развитию сопровождения
 

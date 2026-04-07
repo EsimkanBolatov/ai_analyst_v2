@@ -7,6 +7,7 @@ AI-Analyst Platform это full-stack платформа для контроля
 - `backend_v3` — основной API
 - `web_frontend` — новый web-клиент
 - `file_service` — сервис хранения и отдачи файлов
+- `groq_service`, `profiling_service`, `training_service`, `prediction_service`, `fraud_check_service` — старые ML/AI/fraud сервисы, подключенные к новому UI через раздел `ML Lab`
 - `browser_extension` — браузерное расширение Chromium Manifest V3
 
 ## Что уже реализовано
@@ -18,6 +19,7 @@ AI-Analyst Platform это full-stack платформа для контроля
 3. Жалобы пользователей, очередь модерации, финальный blacklist
 4. Браузерное расширение для проверки ссылок и телефонов
 5. Полировка UI, metadata, deploy-конфиги и release-ready документация
+6. Перенос логики старых Streamlit-страниц в новый Next.js UI без удаления старого Streamlit-контура
 
 ## Структура репозитория
 
@@ -25,6 +27,11 @@ AI-Analyst Platform это full-stack платформа для контроля
 backend_v3/         FastAPI API, бизнес-логика, модели, схемы
 web_frontend/       Next.js App Router frontend
 file_service/       FastAPI сервис загрузки и выдачи файлов
+groq_service/       legacy AI Analyst service для отчетов и чата по датасету
+profiling_service/  legacy ydata-profiling service для HTML-отчетов
+training_service/   legacy ML training service
+prediction_service/ legacy scoring/prediction service
+fraud_check_service/ legacy risk-scoring service
 browser_extension/  Chromium MV3 extension
 frontend/           legacy Streamlit prototype
 docs/               русскоязычная техническая и эксплуатационная документация
@@ -61,6 +68,11 @@ POSTGRES_HOST=db
 JWT_SECRET_KEY=replace_with_long_access_secret
 JWT_REFRESH_SECRET_KEY=replace_with_long_refresh_secret
 FILE_SERVICE_URL=http://file_service:8000
+GROQ_SERVICE_URL=http://groq_service:8000
+PROFILING_SERVICE_URL=http://profiling_service:8000
+TRAINING_SERVICE_URL=http://training_service:8000
+PREDICTION_SERVICE_URL=http://prediction_service:8000
+FRAUD_CHECK_SERVICE_URL=http://fraud_check_service:8000
 NEXT_PUBLIC_API_BASE_URL=http://localhost:8010/api/v1
 NEXT_PUBLIC_SITE_URL=http://localhost:3000
 ALLOWED_ORIGINS=http://localhost:3000,http://127.0.0.1:3000,http://localhost:8501
@@ -86,7 +98,13 @@ Seed также создает тестовый бюджет, несколько
 docker compose up --build backend_api web_frontend file_service db
 ```
 
-Если нужен и legacy-контур тоже:
+Если нужен новый `ML Lab` с перенесенной логикой старых Streamlit-страниц, поднимите также legacy ML/AI/fraud сервисы:
+
+```powershell
+docker compose up --build backend_api web_frontend file_service db groq_service profiling_service training_service prediction_service fraud_check_service
+```
+
+Если нужен вообще весь стек, включая старый Streamlit UI:
 
 ```powershell
 docker compose up --build
@@ -95,6 +113,7 @@ docker compose up --build
 ### 3. Откройте сервисы
 
 - Web UI: `http://localhost:3000`
+- ML Lab в новом UI: `http://localhost:3000/ml-lab`
 - Backend API: `http://localhost:8010`
 - Swagger/OpenAPI: `http://localhost:8010/docs`
 - File service: `http://localhost:8000`
@@ -113,6 +132,11 @@ $env:DATABASE_URL="postgresql+psycopg2://postgres:password@localhost:5433/ai_ana
 $env:JWT_SECRET_KEY="dev-access-secret"
 $env:JWT_REFRESH_SECRET_KEY="dev-refresh-secret"
 $env:FILE_SERVICE_URL="http://localhost:8000"
+$env:GROQ_SERVICE_URL="http://localhost:8008"
+$env:PROFILING_SERVICE_URL="http://localhost:8004"
+$env:TRAINING_SERVICE_URL="http://localhost:8001"
+$env:PREDICTION_SERVICE_URL="http://localhost:8003"
+$env:FRAUD_CHECK_SERVICE_URL="http://localhost:8005"
 $env:ALLOWED_ORIGINS="http://localhost:3000,http://127.0.0.1:3000"
 ..\venv\Scripts\python -m uvicorn app.main:app --host 0.0.0.0 --port 8010 --reload
 ```
@@ -156,6 +180,8 @@ cd ..; node --check browser_extension\background.js
 node --check browser_extension\content.js
 node --check browser_extension\popup.js
 docker compose --env-file .env.example config
+docker compose build backend_api
+docker compose build web_frontend
 ```
 
 Дополнительно в проекте выполнен прикладной backend smoke-test через `FastAPI TestClient` с проверкой:
@@ -178,12 +204,14 @@ docker compose --env-file .env.example config
 - [Тестирование и контроль качества](docs/testing_ru.md)
 - [Эксплуатация и сопровождение](docs/operations_ru.md)
 - [Браузерное расширение](docs/browser_extension_ru.md)
+- [Перенос Streamlit-логики в ML Lab](docs/legacy_migration_ru.md)
 
 ## Известные особенности среды
 
 - Если `docker info` не видит server section, сначала запустите Docker Desktop.
 - На текущей Windows-среде `Next.js build` предупреждает о проблеме с нативным `@next/swc-win32-x64-msvc`, но сборка успешно завершается через wasm fallback.
 - Если `GROQ_API_KEY` не задан, AI-ответы backend продолжают работать через fallback-эвристики.
+- Раздел `ML Lab` использует старые микросервисы. Если запущены только `backend_api web_frontend file_service db`, страницы `Data Profile`, `AI Report`, `Train Model`, `Prediction` и legacy `Fraud Check` будут возвращать ошибку недоступности соответствующего legacy-сервиса.
 
 ## Актуальные изменения после технической проверки
 
