@@ -226,6 +226,70 @@ def generate_features(df: pd.DataFrame, config: Dict[str, Any]) -> (pd.DataFrame
     return df_eng, generated_eng_features
 
 
+def _normalize_numeric_series(series: pd.Series) -> pd.Series:
+    if pd.api.types.is_numeric_dtype(series):
+        return pd.to_numeric(series, errors="coerce")
+
+    normalized = (
+        series.astype(str)
+        .str.strip()
+        .str.replace("\xa0", "", regex=False)
+        .str.replace(" ", "", regex=False)
+        .str.replace(",", ".", regex=False)
+    )
+    return pd.to_numeric(normalized, errors="coerce")
+
+
+def validate_and_prepare_features(
+    df: pd.DataFrame,
+    numerical_features: List[str],
+    categorical_features: List[str],
+) -> pd.DataFrame:
+    prepared = df.copy()
+    missing_features = [
+        feature
+        for feature in [*numerical_features, *categorical_features]
+        if feature not in prepared.columns
+    ]
+    if missing_features:
+        raise HTTPException(
+            status_code=400,
+            detail=f"В датасете нет выбранных признаков: {', '.join(missing_features)}.",
+        )
+
+    invalid_numeric: list[str] = []
+    for feature in numerical_features:
+        original = prepared[feature]
+        converted = _normalize_numeric_series(original)
+        missing_mask = original.isna() | original.astype(str).str.strip().isin(["", "nan", "None", "NaN"])
+        invalid_mask = converted.isna() & ~missing_mask
+        if invalid_mask.any():
+            examples = original[invalid_mask].astype(str).head(3).tolist()
+            invalid_numeric.append(f"{feature} (примеры: {', '.join(examples)})")
+            continue
+
+        fill_value = converted.median()
+        if pd.isna(fill_value):
+            fill_value = 0
+        prepared[feature] = converted.fillna(fill_value)
+
+    if invalid_numeric:
+        raise HTTPException(
+            status_code=400,
+            detail=(
+                "Следующие колонки выбраны как Numerical, но содержат нечисловые значения: "
+                f"{'; '.join(invalid_numeric)}. "
+                "Уберите UUID/id/текстовые поля из Numerical. Если это идентификатор карты или клиента, "
+                "используйте его только в Feature Engineering как Card ID или перенесите в Categorical."
+            ),
+        )
+
+    for feature in categorical_features:
+        prepared[feature] = prepared[feature].fillna("__missing__").astype(str)
+
+    return prepared
+
+
 # --- Эндпоинт обучения ---
 @app.post("/train_anomaly_detector/")
 async def train_anomaly_detector(request: TrainingRequest):
@@ -270,6 +334,7 @@ async def train_anomaly_detector(request: TrainingRequest):
         categorical_transformer = Pipeline(steps=[('onehot', OneHotEncoder(handle_unknown='ignore'))])
         actual_numerical = [f for f in final_numerical_features if f in df_processed.columns]
         actual_categorical = [f for f in final_categorical_features if f in df_processed.columns]
+        df_processed = validate_and_prepare_features(df_processed, actual_numerical, actual_categorical)
         transformers = []
         if actual_numerical:
             transformers.append(('num', numeric_transformer, actual_numerical))
@@ -326,6 +391,8 @@ async def train_anomaly_detector(request: TrainingRequest):
 
         return {"message": f"Модель '{request.model_name}' ({request.model_type}) успешно обучена и сохранена."}
 
+    except HTTPException:
+        raise
     except KeyError as e:
         raise HTTPException(status_code=400, detail=f"Ошибка: Не найдена необходимая колонка '{e}' в датасете.")
     except Exception as e:
